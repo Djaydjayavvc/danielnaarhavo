@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
 import { subjects } from './questions';
+import { memes } from './memes';
 
 export function Play() {
   const [name, setName] = useState(localStorage.getItem('dnh_name') || '');
@@ -10,6 +11,7 @@ export function Play() {
   const [revealed, setRevealed] = useState(false);
   const [answer, setAnswer] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [memeIndex, setMemeIndex] = useState<number | null>(null);
 
   useEffect(() => {
     supabase.from('dnh_quiz_state').select('*').eq('id', 1).single()
@@ -18,6 +20,7 @@ export function Play() {
           setSubjectId(data.subject_id);
           setCurrentQ(data.current_question);
           setRevealed(data.revealed);
+          setMemeIndex(data.meme_index);
         }
       });
 
@@ -29,6 +32,7 @@ export function Play() {
           setSubjectId(p.new.subject_id);
           setCurrentQ(p.new.current_question);
           setRevealed(p.new.revealed);
+          setMemeIndex(p.new.meme_index);
         })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
@@ -45,19 +49,22 @@ export function Play() {
   };
 
   if (!nameSet) return (
-    <div style={S.page}>
-      <style>{kf}</style>
-      <div style={{ ...S.container, maxWidth: 440, marginTop: 80 }}>
-        <div style={S.welcomeCard}>
-          <div style={S.welcomeEmoji}>📚✨</div>
-          <h1 style={S.h1}>Daniel naar HAVO!</h1>
-          <p style={S.welcomeSub}>Wie ben je, kampioen?</p>
-          <input value={name} onChange={e => setName(e.target.value)} placeholder="Typ je naam…"
-            style={S.input} onKeyDown={(e) => e.key === 'Enter' && name.trim() && saveName()} />
-          <button onClick={saveName} disabled={!name.trim()} style={S.btnPrimary}>Let's go! 🚀</button>
+    <>
+      {memeIndex !== null && memes[memeIndex] && <MemeOverlay meme={memes[memeIndex]} />}
+      <div style={S.page}>
+        <style>{kf}</style>
+        <div style={{ ...S.container, maxWidth: 440, marginTop: 80 }}>
+          <div style={S.welcomeCard}>
+            <div style={S.welcomeEmoji}>📚✨</div>
+            <h1 style={S.h1}>Daniel naar HAVO!</h1>
+            <p style={S.welcomeSub}>Wie ben je, kampioen?</p>
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="Typ je naam…"
+              style={S.input} onKeyDown={(e) => e.key === 'Enter' && name.trim() && saveName()} />
+            <button onClick={saveName} disabled={!name.trim()} style={S.btnPrimary}>Let's go! 🚀</button>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 
   const subject = subjects.find(s => s.id === subjectId) || subjects[0];
@@ -66,64 +73,99 @@ export function Play() {
   const progress = total > 0 ? ((currentQ + (revealed ? 1 : 0)) / total) * 100 : 0;
 
   if (!q) return (
-    <div style={S.page}>
-      <style>{kf}</style>
-      <div style={S.container}>
-        <div style={S.card}>
-          <h2 style={{ fontSize: 28, margin: 0 }}>🎉 Sectie klaar!</h2>
-          <p style={S.muted}>Wacht op de volgende sectie…</p>
+    <>
+      {memeIndex !== null && memes[memeIndex] && <MemeOverlay meme={memes[memeIndex]} />}
+      <div style={S.page}>
+        <style>{kf}</style>
+        <div style={S.container}>
+          <div style={S.card}>
+            <h2 style={{ fontSize: 28, margin: 0 }}>🎉 Sectie klaar!</h2>
+            <p style={S.muted}>Wacht op de volgende sectie…</p>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 
   return (
-    <div style={S.page}>
-      <style>{kf}</style>
-      <div style={S.container}>
-        <div style={S.greeting}>Hoi <b>{name}</b> 👋</div>
-        <h1 style={S.h1}>{subject.title}</h1>
+    <>
+      {memeIndex !== null && memes[memeIndex] && <MemeOverlay meme={memes[memeIndex]} />}
+      <div style={S.page}>
+        <style>{kf}</style>
+        <div style={S.container}>
+          <div style={S.greeting}>Hoi <b>{name}</b> 👋</div>
+          <h1 style={S.h1}>{subject.title}</h1>
 
-        <div style={S.progressBar}>
-          <div style={{ ...S.progressFill, width: `${progress}%` }} />
-        </div>
-        <div style={S.progressLabel}>Vraag {currentQ + 1} van {total} 💪</div>
+          <div style={S.progressBar}>
+            <div style={{ ...S.progressFill, width: `${progress}%` }} />
+          </div>
+          <div style={S.progressLabel}>Vraag {currentQ + 1} van {total} 💪</div>
 
-        <div style={S.card}>
-          <div style={S.qNum}>✏️ VRAAG {currentQ + 1}</div>
-          <p style={S.qText}>{q.prompt}</p>
-          {q.options && (
-            <div style={S.optionsBox}>
-              {q.options.map((o, i) => <div key={i} style={S.option}>{o}</div>)}
+          <div style={S.card}>
+            <div style={S.qNum}>✏️ VRAAG {currentQ + 1}</div>
+            <p style={S.qText}>{q.prompt}</p>
+            {q.options && (
+              <div style={S.optionsBox}>
+                {q.options.map((o, i) => <div key={i} style={S.option}>{o}</div>)}
+              </div>
+            )}
+          </div>
+
+          {!submitted ? (
+            <div style={S.card}>
+              <textarea value={answer} onChange={e => setAnswer(e.target.value)}
+                placeholder="Typ je antwoord hier…" rows={3} style={S.textarea} />
+              <button onClick={submit} style={{ ...S.btnPrimary, marginTop: 12 }} disabled={!answer.trim()}>
+                ✉️ Verstuur antwoord
+              </button>
+            </div>
+          ) : (
+            <div style={S.submittedBox}>
+              <div style={S.submittedLabel}>✅ VERSTUURD — goed bezig!</div>
+              <p style={S.submittedText}>{answer}</p>
+            </div>
+          )}
+
+          {revealed && (
+            <div style={S.reveal}>
+              <div style={S.revealHeader}>✅ JUISTE ANTWOORD</div>
+              <p style={S.revealAnswer}>{q.answer}</p>
+              <div style={S.tipBox}>
+                <div style={S.tipHeader}>💡 Wist je dat?</div>
+                <p style={S.tipText}>{q.explanation}</p>
+              </div>
             </div>
           )}
         </div>
+      </div>
+    </>
+  );
+}
 
-        {!submitted ? (
-          <div style={S.card}>
-            <textarea value={answer} onChange={e => setAnswer(e.target.value)}
-              placeholder="Typ je antwoord hier…" rows={3} style={S.textarea} />
-            <button onClick={submit} style={{ ...S.btnPrimary, marginTop: 12 }} disabled={!answer.trim()}>
-              ✉️ Verstuur antwoord
-            </button>
+function MemeOverlay({ meme }: { meme: any }) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
+      <div style={{ maxWidth: 800, width: '100%', background: 'white', borderRadius: 20, overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+        {meme.type === 'youtube' ? (
+          <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
+            <iframe
+              src={`https://www.youtube.com/embed/${meme.src}?autoplay=1&mute=1`}
+              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+              allow="autoplay; encrypted-media"
+              allowFullScreen
+            />
           </div>
         ) : (
-          <div style={S.submittedBox}>
-            <div style={S.submittedLabel}>✅ VERSTUURD — goed bezig!</div>
-            <p style={S.submittedText}>{answer}</p>
+          <img src={meme.src} alt="meme" style={{ width: '100%', display: 'block' }} />
+        )}
+        {meme.caption && (
+          <div style={{ padding: '14px 18px', fontSize: 18, fontWeight: 700, textAlign: 'center', color: '#5b21b6' }}>
+            {meme.caption}
           </div>
         )}
-
-        {revealed && (
-          <div style={S.reveal}>
-            <div style={S.revealHeader}>✅ JUISTE ANTWOORD</div>
-            <p style={S.revealAnswer}>{q.answer}</p>
-            <div style={S.tipBox}>
-              <div style={S.tipHeader}>💡 Wist je dat?</div>
-              <p style={S.tipText}>{q.explanation}</p>
-            </div>
-          </div>
-        )}
+      </div>
+      <div style={{ marginTop: 16, color: 'white', fontSize: 14, opacity: 0.8 }}>
+        🎬 Meme break! Host sluit straks…
       </div>
     </div>
   );

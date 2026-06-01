@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
 import { subjects } from './questions';
+import { memes } from './memes';
 
 export function Host() {
   const [subjectId, setSubjectId] = useState(subjects[0].id);
   const [currentQ, setCurrentQ] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [answers, setAnswers] = useState<any[]>([]);
+  const [memeIndex, setMemeIndex] = useState<number | null>(null);
 
   useEffect(() => {
     supabase.from('dnh_quiz_state').select('*').eq('id', 1).single()
@@ -15,6 +17,7 @@ export function Host() {
           setSubjectId(data.subject_id);
           setCurrentQ(data.current_question);
           setRevealed(data.revealed);
+          setMemeIndex(data.meme_index);
         }
       });
     supabase.from('dnh_answers').select('*').order('created_at')
@@ -28,6 +31,7 @@ export function Host() {
           setSubjectId(p.new.subject_id);
           setCurrentQ(p.new.current_question);
           setRevealed(p.new.revealed);
+          setMemeIndex(p.new.meme_index);
         })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
@@ -37,6 +41,7 @@ export function Host() {
     if ('subject_id' in u) setSubjectId(u.subject_id);
     if ('current_question' in u) setCurrentQ(u.current_question);
     if ('revealed' in u) setRevealed(u.revealed);
+    if ('meme_index' in u) setMemeIndex(u.meme_index);
     const { error } = await supabase.from('dnh_quiz_state').update(u).eq('id', 1);
     if (error) console.error('Update failed:', error);
   };
@@ -45,6 +50,9 @@ export function Host() {
   const next = () => update({ current_question: currentQ + 1, revealed: false });
   const reset = () => update({ current_question: 0, revealed: false });
   const switchSubject = (id: string) => update({ subject_id: id, current_question: 0, revealed: false });
+  const showRandomMeme = () => update({ meme_index: Math.floor(Math.random() * memes.length) });
+  const showMeme = (i: number) => update({ meme_index: i });
+  const closeMeme = () => update({ meme_index: null });
 
   const subject = subjects.find(s => s.id === subjectId) || subjects[0];
   const q = subject.questions[currentQ];
@@ -55,6 +63,9 @@ export function Host() {
   return (
     <div style={S.page}>
       <style>{kf}</style>
+      {memeIndex !== null && memes[memeIndex] && (
+        <MemeOverlay meme={memes[memeIndex]} onClose={closeMeme} isHost />
+      )}
       <div style={S.container}>
         <div style={S.headerRow}>
           <div style={S.badge}>🎓 HOST MODE</div>
@@ -124,11 +135,53 @@ export function Host() {
               {!revealed
                 ? <button onClick={reveal} style={S.btnPrimary}>🔍 Toon antwoord</button>
                 : <button onClick={next} style={S.btnPrimary}>➡️ Volgende vraag</button>}
+              <button onClick={showRandomMeme} style={S.btnMeme}>🎬 Meme</button>
               <button onClick={reset} style={S.btnSecondary}>↺ Reset</button>
+            </div>
+            <div style={{ marginTop: 8, fontSize: 12, color: '#6b7280' }}>
+              Specifieke meme: {memes.map((m, i) => (
+                <button key={i} onClick={() => showMeme(i)} style={S.memePill}>{i + 1}</button>
+              ))}
             </div>
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+function MemeOverlay({ meme, onClose, isHost }: { meme: any; onClose: () => void; isHost?: boolean }) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
+      <div style={{ maxWidth: 800, width: '100%', background: 'white', borderRadius: 20, overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+        {meme.type === 'youtube' ? (
+          <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
+            <iframe
+              src={`https://www.youtube.com/embed/${meme.src}?autoplay=1&mute=0`}
+              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+              allow="autoplay; encrypted-media"
+              allowFullScreen
+            />
+          </div>
+        ) : (
+          <img src={meme.src} alt="meme" style={{ width: '100%', display: 'block' }} />
+        )}
+        {meme.caption && (
+          <div style={{ padding: '14px 18px', fontSize: 18, fontWeight: 700, textAlign: 'center', color: '#5b21b6' }}>
+            {meme.caption}
+          </div>
+        )}
+      </div>
+      {isHost && (
+        <button onClick={onClose} style={{ marginTop: 20, padding: '12px 24px', fontSize: 15, fontWeight: 700, border: 'none', borderRadius: 12, background: 'white', color: '#1f2937', cursor: 'pointer' }}>
+          ✖ Sluit meme
+        </button>
+      )}
+      {!isHost && (
+        <div style={{ marginTop: 16, color: 'white', fontSize: 14, opacity: 0.8 }}>
+          🎬 Meme break! Host sluit straks…
+        </div>
+      )}
     </div>
   );
 }
@@ -172,4 +225,6 @@ const S: Record<string, React.CSSProperties> = {
   actions: { display: 'flex', gap: 10, marginTop: 8 },
   btnPrimary: { padding: '14px 22px', fontSize: 16, border: 'none', borderRadius: 14, background: 'linear-gradient(135deg, #7c3aed, #ec4899)', color: 'white', cursor: 'pointer', fontWeight: 800, flex: 1, fontFamily: 'inherit', boxShadow: '0 6px 16px rgba(124,58,237,0.35)' },
   btnSecondary: { padding: '14px 18px', fontSize: 15, border: '2px solid #c4b5fd', borderRadius: 14, background: 'white', color: '#6d28d9', cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit' },
+  btnMeme: { padding: '14px 18px', fontSize: 15, border: 'none', borderRadius: 14, background: 'linear-gradient(135deg, #f59e0b, #ec4899)', color: 'white', cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit' },
+  memePill: { padding: '4px 10px', margin: '0 4px', fontSize: 12, border: '1px solid #d1d5db', borderRadius: 999, background: 'white', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 },
 };
