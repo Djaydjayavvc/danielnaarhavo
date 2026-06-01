@@ -42,19 +42,31 @@ export function Play() {
   bondingIndexRef.current = bondingIndex;
 
   useEffect(() => {
-    supabase.from('dnh_quiz_state').select('*').eq('id', 1).single()
-      .then(({ data }) => {
-        if (data) {
-          setSubjectId(data.subject_id);
-          setCurrentQ(data.current_question);
-          setRevealed(data.revealed);
-          setMemeIndex(data.meme_index);
-          setBondingIndex(data.bonding_index);
-        }
-      });
+    const applyState = (data: any) => {
+      const changed = data.subject_id !== subjectIdRef.current || data.current_question !== currentQRef.current;
+      if (changed) { setSubmitted(false); setAnswer(''); setMySubmittedAnswer(''); }
+      if ((data.bonding_index ?? null) !== bondingIndexRef.current) {
+        setBondingAnswer(''); setBondingSubmitted(false);
+      }
+      setSubjectId(data.subject_id);
+      setCurrentQ(data.current_question);
+      setRevealed(data.revealed);
+      setMemeIndex(data.meme_index ?? null);
+      setBondingIndex(data.bonding_index ?? null);
+    };
 
-    supabase.from('dnh_answers').select('*').eq('subject_id', 'bonding').order('created_at')
-      .then(({ data }) => setBondingAnswers(data || []));
+    const syncState = () =>
+      supabase.from('dnh_quiz_state').select('*').eq('id', 1).single()
+        .then(({ data }) => { if (data) applyState(data); });
+
+    const syncBonding = () =>
+      supabase.from('dnh_answers').select('*').eq('subject_id', 'bonding').order('created_at')
+        .then(({ data }) => { if (data) setBondingAnswers(data); });
+
+    syncState();
+    syncBonding();
+
+    const poll = setInterval(() => { syncState(); syncBonding(); }, 2000);
 
     const ch = supabase.channel('dnh-play')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'dnh_answers' },
@@ -62,21 +74,10 @@ export function Play() {
           if (p.new.subject_id === 'bonding') setBondingAnswers(prev => [...prev, p.new]);
         })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'dnh_quiz_state' },
-        (p: any) => {
-          const changed = p.new.subject_id !== subjectIdRef.current || p.new.current_question !== currentQRef.current;
-          if (changed) { setSubmitted(false); setAnswer(''); setMySubmittedAnswer(''); }
-          if (p.new.bonding_index !== bondingIndexRef.current) {
-            setBondingAnswer('');
-            setBondingSubmitted(false);
-          }
-          setSubjectId(p.new.subject_id);
-          setCurrentQ(p.new.current_question);
-          setRevealed(p.new.revealed);
-          setMemeIndex(p.new.meme_index);
-          setBondingIndex(p.new.bonding_index);
-        })
+        (p: any) => applyState(p.new))
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+
+    return () => { supabase.removeChannel(ch); clearInterval(poll); };
   }, []);
 
   const subject = subjects.find(s => s.id === subjectId) || subjects[0];
