@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { supabase } from './lib/supabase';
 import { subjects } from './questions';
 import { memes } from './memes';
+import { bondingQuestions } from './bonding';
 import confetti from 'canvas-confetti';
 
 function checkCorrect(playerAnswer: string, correctAnswer: string, isMC: boolean) {
@@ -25,9 +26,13 @@ export function Play() {
   const [currentQ, setCurrentQ] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [memeIndex, setMemeIndex] = useState<number | null>(null);
+  const [bondingIndex, setBondingIndex] = useState<number | null>(null);
   const [answer, setAnswer] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [mySubmittedAnswer, setMySubmittedAnswer] = useState('');
+  const [bondingAnswer, setBondingAnswer] = useState('');
+  const [bondingSubmitted, setBondingSubmitted] = useState(false);
+  const [bondingAnswers, setBondingAnswers] = useState<any[]>([]);
   const celebratedFor = useRef<string | null>(null);
 
   useEffect(() => {
@@ -38,22 +43,35 @@ export function Play() {
           setCurrentQ(data.current_question);
           setRevealed(data.revealed);
           setMemeIndex(data.meme_index);
+          setBondingIndex(data.bonding_index);
         }
       });
 
+    supabase.from('dnh_answers').select('*').eq('subject_id', 'bonding').order('created_at')
+      .then(({ data }) => setBondingAnswers(data || []));
+
     const ch = supabase.channel('dnh-play')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'dnh_answers' },
+        (p: any) => {
+          if (p.new.subject_id === 'bonding') setBondingAnswers(prev => [...prev, p.new]);
+        })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'dnh_quiz_state' },
         (p: any) => {
           const changed = p.new.subject_id !== subjectId || p.new.current_question !== currentQ;
           if (changed) { setSubmitted(false); setAnswer(''); setMySubmittedAnswer(''); }
+          if (p.new.bonding_index !== bondingIndex) {
+            setBondingAnswer('');
+            setBondingSubmitted(false);
+          }
           setSubjectId(p.new.subject_id);
           setCurrentQ(p.new.current_question);
           setRevealed(p.new.revealed);
           setMemeIndex(p.new.meme_index);
+          setBondingIndex(p.new.bonding_index);
         })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [subjectId, currentQ]);
+  }, [subjectId, currentQ, bondingIndex]);
 
   const subject = subjects.find(s => s.id === subjectId) || subjects[0];
   const q = subject.questions[currentQ];
@@ -78,6 +96,15 @@ export function Play() {
     setSubmitted(true);
   };
 
+  const submitBonding = async () => {
+    if (!bondingAnswer.trim() || bondingIndex === null) return;
+    const { error } = await supabase.from('dnh_answers').insert({
+      subject_id: 'bonding', question_index: bondingIndex, player_name: name, answer: bondingAnswer,
+    });
+    if (error) console.error('Insert failed:', error);
+    setBondingSubmitted(true);
+  };
+
   const showMemeOverlay = memeIndex !== null && memes[memeIndex];
 
   if (!nameSet) return (
@@ -98,6 +125,51 @@ export function Play() {
       </div>
     </>
   );
+
+  // Bonding question view
+  if (bondingIndex !== null) {
+    const bondingPrompt = bondingQuestions[bondingIndex];
+    const ans = bondingAnswers.filter(a => a.question_index === bondingIndex);
+    return (
+      <>
+        {showMemeOverlay && <MemeOverlay meme={memes[memeIndex!]} />}
+        <div style={S.page}>
+          <style>{kf}</style>
+          <div style={S.container}>
+            <div style={S.bondingBanner}>💬 VRAAGJE TUSSENDOOR</div>
+            <div style={S.card}>
+              <p style={S.qText}>{bondingPrompt}</p>
+            </div>
+            {!bondingSubmitted ? (
+              <div style={S.card}>
+                <textarea value={bondingAnswer} onChange={e => setBondingAnswer(e.target.value)}
+                  placeholder="Typ je antwoord hier…" rows={3} style={S.textarea} />
+                <button onClick={submitBonding} style={{ ...S.btnPrimary, marginTop: 12 }} disabled={!bondingAnswer.trim()}>
+                  ✉️ Verstuur
+                </button>
+              </div>
+            ) : (
+              <div style={S.submittedBox}>
+                <div style={S.submittedLabel}>✅ JOUW ANTWOORD</div>
+                <p style={S.submittedText}>{bondingAnswer}</p>
+              </div>
+            )}
+            {ans.length > 0 && (
+              <div style={S.card}>
+                <h3 style={S.cardTitle}>📬 Iedereen's antwoorden</h3>
+                {ans.map(a => (
+                  <div key={a.id} style={S.answerItem}>
+                    <span style={S.answerName}>{a.player_name}</span>
+                    <span style={S.answerText}>{a.answer}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </>
+    );
+  }
 
   const total = subject.questions.length;
   const progress = total > 0 ? ((currentQ + (revealed ? 1 : 0)) / total) * 100 : 0;
@@ -193,25 +265,18 @@ function MemeOverlay({ meme }: { meme: any }) {
       <div style={{ maxWidth: 800, width: '100%', background: 'white', borderRadius: 20, overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
         {meme.type === 'youtube' ? (
           <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
-            <iframe
-              src={`https://www.youtube.com/embed/${meme.src}?autoplay=1&mute=1`}
+            <iframe src={`https://www.youtube.com/embed/${meme.src}?autoplay=1&mute=1`}
               style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
-              allow="autoplay; encrypted-media"
-              allowFullScreen
-            />
+              allow="autoplay; encrypted-media" allowFullScreen />
           </div>
         ) : (
           <img src={meme.src} alt="meme" style={{ width: '100%', display: 'block' }} />
         )}
         {meme.caption && (
-          <div style={{ padding: '14px 18px', fontSize: 18, fontWeight: 700, textAlign: 'center', color: '#5b21b6' }}>
-            {meme.caption}
-          </div>
+          <div style={{ padding: '14px 18px', fontSize: 18, fontWeight: 700, textAlign: 'center', color: '#5b21b6' }}>{meme.caption}</div>
         )}
       </div>
-      <div style={{ marginTop: 16, color: 'white', fontSize: 14, opacity: 0.8 }}>
-        🎬 Meme break! Host sluit straks…
-      </div>
+      <div style={{ marginTop: 16, color: 'white', fontSize: 14, opacity: 0.8 }}>🎬 Meme break!</div>
     </div>
   );
 }
@@ -233,10 +298,12 @@ const S: Record<string, React.CSSProperties> = {
   welcomeSub: { fontSize: 16, color: '#6b7280', margin: '4px 0 16px' },
   greeting: { fontSize: 15, color: '#5b21b6', marginBottom: 4, fontWeight: 600 },
   h1: { fontSize: 26, margin: '4px 0 16px', color: '#5b21b6', fontWeight: 900, textShadow: '2px 2px 0px #fde68a' },
+  bondingBanner: { textAlign: 'center', background: 'linear-gradient(135deg, #f472b6, #c084fc)', color: 'white', padding: '10px 16px', borderRadius: 999, fontSize: 13, fontWeight: 800, letterSpacing: 1, marginBottom: 16, boxShadow: '0 6px 16px rgba(192,132,252,0.4)' },
   progressBar: { height: 14, background: 'rgba(255,255,255,0.6)', borderRadius: 999, overflow: 'hidden', marginBottom: 6, border: '2px solid #c4b5fd' },
   progressFill: { height: '100%', background: 'linear-gradient(90deg, #ec4899, #f59e0b, #10b981)', backgroundSize: '200px 100%', animation: 'shimmer 2s linear infinite', transition: 'width 0.5s' },
   progressLabel: { fontSize: 14, color: '#6d28d9', marginBottom: 20, textAlign: 'center', fontWeight: 600 },
   card: { background: 'white', borderRadius: 20, padding: 22, marginBottom: 16, boxShadow: '0 8px 24px rgba(124,58,237,0.12)', animation: 'pop 0.3s ease-out' },
+  cardTitle: { margin: '0 0 12px', fontSize: 17, color: '#5b21b6', fontWeight: 700 },
   qNum: { fontSize: 12, fontWeight: 800, color: '#ec4899', letterSpacing: 1, marginBottom: 8 },
   qText: { fontSize: 20, margin: 0, lineHeight: 1.5, color: '#1f2937', fontWeight: 500 },
   optionsBox: { marginTop: 14 },
@@ -246,6 +313,9 @@ const S: Record<string, React.CSSProperties> = {
   submittedBox: { background: 'linear-gradient(135deg, #ede9fe, #ddd6fe)', border: '2px solid #a78bfa', borderRadius: 16, padding: 16, marginBottom: 16, animation: 'pop 0.3s ease-out' },
   submittedLabel: { fontSize: 12, fontWeight: 800, color: '#5b21b6', letterSpacing: 1 },
   submittedText: { margin: '6px 0 0', fontSize: 15, color: '#3b0764' },
+  answerItem: { display: 'flex', flexDirection: 'column', gap: 4, padding: '12px 14px', background: 'linear-gradient(135deg, #fef3c7, #fde68a)', borderRadius: 12, marginBottom: 8 },
+  answerName: { fontWeight: 800, color: '#92400e', fontSize: 14 },
+  answerText: { fontSize: 15, color: '#451a03' },
   correctBanner: { background: 'linear-gradient(135deg, #fbbf24, #f59e0b, #ec4899)', borderRadius: 20, padding: 24, marginBottom: 16, textAlign: 'center', color: 'white', boxShadow: '0 12px 32px rgba(251,191,36,0.4)', animation: 'pop 0.5s ease-out' },
   correctEmoji: { fontSize: 48, marginBottom: 4, animation: 'bounce 0.8s ease-in-out infinite' },
   correctText: { margin: '4px 0', fontSize: 24, fontWeight: 900, textShadow: '2px 2px 0px rgba(0,0,0,0.15)' },

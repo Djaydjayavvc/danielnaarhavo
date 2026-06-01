@@ -2,13 +2,18 @@ import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
 import { subjects } from './questions';
 import { memes } from './memes';
+import { bondingQuestions } from './bonding';
 
 export function Host() {
+  const HOST_NAME = 'Yahya';
   const [subjectId, setSubjectId] = useState(subjects[0].id);
   const [currentQ, setCurrentQ] = useState(0);
   const [revealed, setRevealed] = useState(false);
-  const [answers, setAnswers] = useState<any[]>([]);
   const [memeIndex, setMemeIndex] = useState<number | null>(null);
+  const [bondingIndex, setBondingIndex] = useState<number | null>(null);
+  const [answers, setAnswers] = useState<any[]>([]);
+  const [bondingAnswer, setBondingAnswer] = useState('');
+  const [bondingSubmitted, setBondingSubmitted] = useState(false);
 
   useEffect(() => {
     supabase.from('dnh_quiz_state').select('*').eq('id', 1).single()
@@ -18,6 +23,7 @@ export function Host() {
           setCurrentQ(data.current_question);
           setRevealed(data.revealed);
           setMemeIndex(data.meme_index);
+          setBondingIndex(data.bonding_index);
         }
       });
     supabase.from('dnh_answers').select('*').order('created_at')
@@ -32,6 +38,11 @@ export function Host() {
           setCurrentQ(p.new.current_question);
           setRevealed(p.new.revealed);
           setMemeIndex(p.new.meme_index);
+          if (p.new.bonding_index !== bondingIndex) {
+            setBondingAnswer('');
+            setBondingSubmitted(false);
+          }
+          setBondingIndex(p.new.bonding_index);
         })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
@@ -42,6 +53,13 @@ export function Host() {
     if ('current_question' in u) setCurrentQ(u.current_question);
     if ('revealed' in u) setRevealed(u.revealed);
     if ('meme_index' in u) setMemeIndex(u.meme_index);
+    if ('bonding_index' in u) {
+      setBondingIndex(u.bonding_index);
+      if (u.bonding_index !== bondingIndex) {
+        setBondingAnswer('');
+        setBondingSubmitted(false);
+      }
+    }
     const { error } = await supabase.from('dnh_quiz_state').update(u).eq('id', 1);
     if (error) console.error('Update failed:', error);
   };
@@ -53,12 +71,25 @@ export function Host() {
   const showRandomMeme = () => update({ meme_index: Math.floor(Math.random() * memes.length) });
   const showMeme = (i: number) => update({ meme_index: i });
   const closeMeme = () => update({ meme_index: null });
+  const showBonding = () => update({ bonding_index: Math.floor(Math.random() * bondingQuestions.length) });
+  const closeBonding = () => update({ bonding_index: null });
+
+  const submitBonding = async () => {
+    if (!bondingAnswer.trim() || bondingIndex === null) return;
+    const { error } = await supabase.from('dnh_answers').insert({
+      subject_id: 'bonding', question_index: bondingIndex, player_name: HOST_NAME, answer: bondingAnswer,
+    });
+    if (error) console.error('Insert failed:', error);
+    setBondingSubmitted(true);
+  };
 
   const subject = subjects.find(s => s.id === subjectId) || subjects[0];
   const q = subject.questions[currentQ];
   const total = subject.questions.length;
   const qAns = answers.filter(a => a.subject_id === subjectId && a.question_index === currentQ);
   const progress = total > 0 ? ((currentQ + (revealed ? 1 : 0)) / total) * 100 : 0;
+  const bondingPrompt = bondingIndex !== null ? bondingQuestions[bondingIndex] : null;
+  const bondingAns = bondingIndex !== null ? answers.filter(a => a.subject_id === 'bonding' && a.question_index === bondingIndex) : [];
 
   return (
     <div style={S.page}>
@@ -66,83 +97,133 @@ export function Host() {
       {memeIndex !== null && memes[memeIndex] && (
         <MemeOverlay meme={memes[memeIndex]} onClose={closeMeme} isHost />
       )}
+
       <div style={S.container}>
         <div style={S.headerRow}>
           <div style={S.badge}>🎓 HOST MODE</div>
           <h1 style={S.h1}>Daniel naar HAVO 🚀</h1>
         </div>
 
-        <div style={S.chipRow}>
-          {subjects.map(s => (
-            <button key={s.id} onClick={() => switchSubject(s.id)}
-              style={{ ...S.chip, ...(s.id === subjectId ? S.chipActive : {}) }}>
-              {s.title.split('—')[0].trim()}
-            </button>
-          ))}
-        </div>
-
-        <div style={S.subjectTitle}>{subject.title}</div>
-
-        <div style={S.progressBar}>
-          <div style={{ ...S.progressFill, width: `${progress}%` }} />
-        </div>
-        <div style={S.progressLabel}>
-          {!q ? '🎉 Klaar!' : `Vraag ${currentQ + 1} van ${total}`}
-        </div>
-
-        {!q ? (
-          <div style={S.card}>
-            <h2 style={{ marginTop: 0, fontSize: 28 }}>🎉 Sectie klaar!</h2>
-            <p style={S.muted}>Goed bezig, kies een volgende sectie of begin opnieuw.</p>
-            <button onClick={reset} style={S.btnPrimary}>↺ Opnieuw beginnen</button>
-          </div>
-        ) : (
+        {bondingPrompt !== null ? (
           <>
+            <div style={S.bondingBanner}>💬 VRAAGJE TUSSENDOOR</div>
             <div style={S.card}>
-              <div style={S.qNum}>✏️ VRAAG {currentQ + 1}</div>
-              <p style={S.qText}>{q.prompt}</p>
-              {q.options && (
-                <div style={S.optionsBox}>
-                  {q.options.map((o, i) => <div key={i} style={S.option}>{o}</div>)}
-                </div>
-              )}
+              <p style={S.qText}>{bondingPrompt}</p>
             </div>
-
+            {!bondingSubmitted ? (
+              <div style={S.card}>
+                <textarea value={bondingAnswer} onChange={e => setBondingAnswer(e.target.value)}
+                  placeholder="Jouw antwoord…" rows={3} style={S.textarea} />
+                <button onClick={submitBonding} style={{ ...S.btnPrimary, marginTop: 12 }} disabled={!bondingAnswer.trim()}>
+                  ✉️ Verstuur
+                </button>
+              </div>
+            ) : (
+              <div style={S.submittedBox}>
+                <div style={S.submittedLabel}>✅ JOUW ANTWOORD</div>
+                <p style={S.submittedText}>{bondingAnswer}</p>
+              </div>
+            )}
             <div style={S.card}>
-              <h3 style={S.cardTitle}>📬 Antwoorden ({qAns.length})</h3>
-              {qAns.length === 0
-                ? <p style={S.muted}>⏳ Wachten op antwoorden…</p>
-                : <div>{qAns.map(a => (
+              <h3 style={S.cardTitle}>📬 Antwoorden ({bondingAns.length})</h3>
+              {bondingAns.length === 0
+                ? <p style={S.muted}>⏳ Wachten…</p>
+                : <div>{bondingAns.map(a => (
                     <div key={a.id} style={S.answerItem}>
                       <span style={S.answerName}>{a.player_name}</span>
                       <span style={S.answerText}>{a.answer}</span>
                     </div>
                   ))}</div>}
             </div>
-
-            {revealed && (
-              <div style={S.reveal}>
-                <div style={S.revealHeader}>✅ JUISTE ANTWOORD</div>
-                <p style={S.revealAnswer}>{q.answer}</p>
-                <div style={S.tipBox}>
-                  <div style={S.tipHeader}>💡 Wist je dat?</div>
-                  <p style={S.tipText}>{q.explanation}</p>
-                </div>
-              </div>
-            )}
-
             <div style={S.actions}>
-              {!revealed
-                ? <button onClick={reveal} style={S.btnPrimary}>🔍 Toon antwoord</button>
-                : <button onClick={next} style={S.btnPrimary}>➡️ Volgende vraag</button>}
-              <button onClick={showRandomMeme} style={S.btnMeme}>🎬 Meme</button>
-              <button onClick={reset} style={S.btnSecondary}>↺ Reset</button>
+              <button onClick={closeBonding} style={S.btnPrimary}>📚 Verder met quiz</button>
+              <button onClick={showBonding} style={S.btnSecondary}>🎲 Andere vraag</button>
             </div>
-            <div style={{ marginTop: 8, fontSize: 12, color: '#6b7280' }}>
-              Specifieke meme: {memes.map((_m, i) => (
-                <button key={i} onClick={() => showMeme(i)} style={S.memePill}>{i + 1}</button>
+          </>
+        ) : (
+          <>
+            <div style={S.chipRow}>
+              {subjects.map(s => (
+                <button key={s.id} onClick={() => switchSubject(s.id)}
+                  style={{ ...S.chip, ...(s.id === subjectId ? S.chipActive : {}) }}>
+                  {s.title.split('—')[0].trim()}
+                </button>
               ))}
             </div>
+
+            <div style={S.subjectTitle}>{subject.title}</div>
+
+            <div style={S.progressBar}>
+              <div style={{ ...S.progressFill, width: `${progress}%` }} />
+            </div>
+            <div style={S.progressLabel}>
+              {!q ? '🎉 Klaar!' : `Vraag ${currentQ + 1} van ${total}`}
+            </div>
+
+            {!q ? (
+              <div style={S.card}>
+                <h2 style={{ marginTop: 0, fontSize: 28 }}>🎉 Sectie klaar!</h2>
+                <p style={S.muted}>Goed bezig, kies een volgende sectie of begin opnieuw.</p>
+                <button onClick={reset} style={S.btnPrimary}>↺ Opnieuw beginnen</button>
+              </div>
+            ) : (
+              <>
+                <div style={S.card}>
+                  <div style={S.qNum}>✏️ VRAAG {currentQ + 1}</div>
+                  <p style={S.qText}>{q.prompt}</p>
+                  {q.options && (
+                    <div style={S.optionsBox}>
+                      {q.options.map((o, i) => <div key={i} style={S.option}>{o}</div>)}
+                    </div>
+                  )}
+                </div>
+
+                <div style={S.card}>
+                  <h3 style={S.cardTitle}>📬 Antwoorden ({qAns.length})</h3>
+                  {qAns.length === 0
+                    ? <p style={S.muted}>⏳ Wachten op antwoorden…</p>
+                    : <div>{qAns.map(a => {
+                        const isMC = !!q.options;
+                        const correct = revealed && isMC && (() => {
+                          const p = (a.answer || '').trim().toUpperCase();
+                          const c = (q.answer || '').trim().toUpperCase();
+                          return p === c || p.startsWith(c + '.') || p.startsWith(c + ')') || p.startsWith(c + ' ');
+                        })();
+                        return (
+                          <div key={a.id} style={{ ...S.answerItem, ...(correct ? { background: 'linear-gradient(135deg, #d1fae5, #a7f3d0)' } : {}) }}>
+                            <span style={S.answerName}>{a.player_name} {correct ? '✅' : ''}</span>
+                            <span style={S.answerText}>{a.answer}</span>
+                          </div>
+                        );
+                      })}</div>}
+                </div>
+
+                {revealed && (
+                  <div style={S.reveal}>
+                    <div style={S.revealHeader}>✅ JUISTE ANTWOORD</div>
+                    <p style={S.revealAnswer}>{q.answer}</p>
+                    <div style={S.tipBox}>
+                      <div style={S.tipHeader}>💡 Wist je dat?</div>
+                      <p style={S.tipText}>{q.explanation}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div style={S.actions}>
+                  {!revealed
+                    ? <button onClick={reveal} style={S.btnPrimary}>🔍 Toon antwoord</button>
+                    : <button onClick={next} style={S.btnPrimary}>➡️ Volgende vraag</button>}
+                  <button onClick={showBonding} style={S.btnBonding}>💬 Vraagje</button>
+                  <button onClick={showRandomMeme} style={S.btnMeme}>🎬 Meme</button>
+                  <button onClick={reset} style={S.btnSecondary}>↺</button>
+                </div>
+                <div style={{ marginTop: 8, fontSize: 12, color: '#6b7280' }}>
+                  Memes: {memes.map((_m, i) => (
+                    <button key={i} onClick={() => showMeme(i)} style={S.memePill}>{i + 1}</button>
+                  ))}
+                </div>
+              </>
+            )}
           </>
         )}
       </div>
@@ -156,20 +237,15 @@ function MemeOverlay({ meme, onClose, isHost }: { meme: any; onClose: () => void
       <div style={{ maxWidth: 800, width: '100%', background: 'white', borderRadius: 20, overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
         {meme.type === 'youtube' ? (
           <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
-            <iframe
-              src={`https://www.youtube.com/embed/${meme.src}?autoplay=1&mute=0`}
+            <iframe src={`https://www.youtube.com/embed/${meme.src}?autoplay=1&mute=0`}
               style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
-              allow="autoplay; encrypted-media"
-              allowFullScreen
-            />
+              allow="autoplay; encrypted-media" allowFullScreen />
           </div>
         ) : (
           <img src={meme.src} alt="meme" style={{ width: '100%', display: 'block' }} />
         )}
         {meme.caption && (
-          <div style={{ padding: '14px 18px', fontSize: 18, fontWeight: 700, textAlign: 'center', color: '#5b21b6' }}>
-            {meme.caption}
-          </div>
+          <div style={{ padding: '14px 18px', fontSize: 18, fontWeight: 700, textAlign: 'center', color: '#5b21b6' }}>{meme.caption}</div>
         )}
       </div>
       {isHost && (
@@ -177,20 +253,15 @@ function MemeOverlay({ meme, onClose, isHost }: { meme: any; onClose: () => void
           ✖ Sluit meme
         </button>
       )}
-      {!isHost && (
-        <div style={{ marginTop: 16, color: 'white', fontSize: 14, opacity: 0.8 }}>
-          🎬 Meme break! Host sluit straks…
-        </div>
-      )}
     </div>
   );
 }
 
 const kf = `
-@keyframes pop { 0% { transform: scale(0.95); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
+@keyframes pop { 0% { transform: scale(0.95); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 @keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: 200px 0; } }
-button:hover { transform: translateY(-2px); transition: transform 0.15s; }
-button:active { transform: translateY(0px) scale(0.98); }
+button:hover:not(:disabled) { transform: translateY(-2px); transition: transform 0.15s; }
+button:active:not(:disabled) { transform: translateY(0px) scale(0.98); }
 `;
 
 const S: Record<string, React.CSSProperties> = {
@@ -199,6 +270,7 @@ const S: Record<string, React.CSSProperties> = {
   headerRow: { textAlign: 'center', marginBottom: 20 },
   badge: { display: 'inline-block', background: '#fbbf24', color: '#78350f', padding: '4px 12px', borderRadius: 999, fontSize: 12, fontWeight: 800, letterSpacing: 1, marginBottom: 8 },
   h1: { fontSize: 32, margin: 0, color: '#5b21b6', fontWeight: 900, textShadow: '2px 2px 0px #fde68a' },
+  bondingBanner: { textAlign: 'center', background: 'linear-gradient(135deg, #f472b6, #c084fc)', color: 'white', padding: '10px 16px', borderRadius: 999, fontSize: 13, fontWeight: 800, letterSpacing: 1, marginBottom: 16, boxShadow: '0 6px 16px rgba(192,132,252,0.4)' },
   chipRow: { display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 12 },
   chip: { padding: '6px 14px', borderRadius: 999, border: '2px solid #c4b5fd', background: 'white', color: '#6d28d9', cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'inherit' },
   chipActive: { background: '#7c3aed', color: 'white', borderColor: '#7c3aed', boxShadow: '0 4px 12px rgba(124,58,237,0.4)' },
@@ -212,6 +284,10 @@ const S: Record<string, React.CSSProperties> = {
   qText: { fontSize: 20, margin: 0, lineHeight: 1.5, color: '#1f2937', fontWeight: 500 },
   optionsBox: { marginTop: 14 },
   option: { padding: '12px 14px', background: '#faf5ff', borderRadius: 12, marginBottom: 8, fontSize: 16, color: '#374151', border: '1px solid #e9d5ff' },
+  textarea: { width: '100%', padding: 14, fontSize: 16, borderRadius: 14, border: '2px solid #c4b5fd', fontFamily: 'inherit', boxSizing: 'border-box', resize: 'vertical' },
+  submittedBox: { background: 'linear-gradient(135deg, #ede9fe, #ddd6fe)', border: '2px solid #a78bfa', borderRadius: 16, padding: 16, marginBottom: 16 },
+  submittedLabel: { fontSize: 12, fontWeight: 800, color: '#5b21b6', letterSpacing: 1 },
+  submittedText: { margin: '6px 0 0', fontSize: 15, color: '#3b0764' },
   answerItem: { display: 'flex', flexDirection: 'column', gap: 4, padding: '12px 14px', background: 'linear-gradient(135deg, #fef3c7, #fde68a)', borderRadius: 12, marginBottom: 8 },
   answerName: { fontWeight: 800, color: '#92400e', fontSize: 14 },
   answerText: { fontSize: 15, color: '#451a03' },
@@ -222,9 +298,10 @@ const S: Record<string, React.CSSProperties> = {
   tipBox: { background: '#fff7ed', border: '2px dashed #fb923c', borderRadius: 14, padding: 14 },
   tipHeader: { fontSize: 12, fontWeight: 800, color: '#c2410c', letterSpacing: 1 },
   tipText: { fontSize: 15, margin: '6px 0 0', color: '#7c2d12', lineHeight: 1.6 },
-  actions: { display: 'flex', gap: 10, marginTop: 8 },
-  btnPrimary: { padding: '14px 22px', fontSize: 16, border: 'none', borderRadius: 14, background: 'linear-gradient(135deg, #7c3aed, #ec4899)', color: 'white', cursor: 'pointer', fontWeight: 800, flex: 1, fontFamily: 'inherit', boxShadow: '0 6px 16px rgba(124,58,237,0.35)' },
+  actions: { display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' },
+  btnPrimary: { padding: '14px 22px', fontSize: 16, border: 'none', borderRadius: 14, background: 'linear-gradient(135deg, #7c3aed, #ec4899)', color: 'white', cursor: 'pointer', fontWeight: 800, flex: 1, fontFamily: 'inherit', boxShadow: '0 6px 16px rgba(124,58,237,0.35)', minWidth: 140 },
   btnSecondary: { padding: '14px 18px', fontSize: 15, border: '2px solid #c4b5fd', borderRadius: 14, background: 'white', color: '#6d28d9', cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit' },
   btnMeme: { padding: '14px 18px', fontSize: 15, border: 'none', borderRadius: 14, background: 'linear-gradient(135deg, #f59e0b, #ec4899)', color: 'white', cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit' },
+  btnBonding: { padding: '14px 18px', fontSize: 15, border: 'none', borderRadius: 14, background: 'linear-gradient(135deg, #c084fc, #f472b6)', color: 'white', cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit' },
   memePill: { padding: '4px 10px', margin: '0 4px', fontSize: 12, border: '1px solid #d1d5db', borderRadius: 999, background: 'white', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 },
 };
