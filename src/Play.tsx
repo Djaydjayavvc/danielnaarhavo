@@ -1,7 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from './lib/supabase';
 import { subjects } from './questions';
 import { memes } from './memes';
+import confetti from 'canvas-confetti';
+
+function checkCorrect(playerAnswer: string, correctAnswer: string, isMC: boolean) {
+  if (!isMC) return false;
+  const p = playerAnswer.trim().toUpperCase();
+  const c = correctAnswer.trim().toUpperCase();
+  return p === c || p.startsWith(c + '.') || p.startsWith(c + ')') || p.startsWith(c + ' ');
+}
+
+function celebrate() {
+  const colors = ['#ec4899', '#f59e0b', '#10b981', '#7c3aed', '#3b82f6'];
+  confetti({ particleCount: 120, spread: 90, origin: { y: 0.6 }, colors });
+  setTimeout(() => confetti({ particleCount: 80, angle: 60, spread: 60, origin: { x: 0, y: 0.7 }, colors }), 200);
+  setTimeout(() => confetti({ particleCount: 80, angle: 120, spread: 60, origin: { x: 1, y: 0.7 }, colors }), 400);
+}
 
 export function Play() {
   const [name, setName] = useState(localStorage.getItem('dnh_name') || '');
@@ -9,9 +24,11 @@ export function Play() {
   const [subjectId, setSubjectId] = useState(subjects[0].id);
   const [currentQ, setCurrentQ] = useState(0);
   const [revealed, setRevealed] = useState(false);
+  const [memeIndex, setMemeIndex] = useState<number | null>(null);
   const [answer, setAnswer] = useState('');
   const [submitted, setSubmitted] = useState(false);
-  const [memeIndex, setMemeIndex] = useState<number | null>(null);
+  const [mySubmittedAnswer, setMySubmittedAnswer] = useState('');
+  const celebratedFor = useRef<string | null>(null);
 
   useEffect(() => {
     supabase.from('dnh_quiz_state').select('*').eq('id', 1).single()
@@ -28,7 +45,7 @@ export function Play() {
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'dnh_quiz_state' },
         (p: any) => {
           const changed = p.new.subject_id !== subjectId || p.new.current_question !== currentQ;
-          if (changed) { setSubmitted(false); setAnswer(''); }
+          if (changed) { setSubmitted(false); setAnswer(''); setMySubmittedAnswer(''); }
           setSubjectId(p.new.subject_id);
           setCurrentQ(p.new.current_question);
           setRevealed(p.new.revealed);
@@ -38,6 +55,18 @@ export function Play() {
     return () => { supabase.removeChannel(ch); };
   }, [subjectId, currentQ]);
 
+  const subject = subjects.find(s => s.id === subjectId) || subjects[0];
+  const q = subject.questions[currentQ];
+  const isMC = !!q?.options;
+  const wasCorrect = q && mySubmittedAnswer ? checkCorrect(mySubmittedAnswer, q.answer, isMC) : false;
+
+  useEffect(() => {
+    if (!q || !revealed || !mySubmittedAnswer) return;
+    const key = `${subjectId}::${currentQ}`;
+    if (celebratedFor.current === key) return;
+    if (wasCorrect) { celebratedFor.current = key; celebrate(); }
+  }, [revealed, q, wasCorrect, subjectId, currentQ, mySubmittedAnswer]);
+
   const saveName = () => { localStorage.setItem('dnh_name', name); setNameSet(true); };
   const submit = async () => {
     if (!answer.trim()) return;
@@ -45,12 +74,15 @@ export function Play() {
       subject_id: subjectId, question_index: currentQ, player_name: name, answer,
     });
     if (error) console.error('Insert failed:', error);
+    setMySubmittedAnswer(answer);
     setSubmitted(true);
   };
 
+  const showMemeOverlay = memeIndex !== null && memes[memeIndex];
+
   if (!nameSet) return (
     <>
-      {memeIndex !== null && memes[memeIndex] && <MemeOverlay meme={memes[memeIndex]} />}
+      {showMemeOverlay && <MemeOverlay meme={memes[memeIndex!]} />}
       <div style={S.page}>
         <style>{kf}</style>
         <div style={{ ...S.container, maxWidth: 440, marginTop: 80 }}>
@@ -67,14 +99,12 @@ export function Play() {
     </>
   );
 
-  const subject = subjects.find(s => s.id === subjectId) || subjects[0];
-  const q = subject.questions[currentQ];
   const total = subject.questions.length;
   const progress = total > 0 ? ((currentQ + (revealed ? 1 : 0)) / total) * 100 : 0;
 
   if (!q) return (
     <>
-      {memeIndex !== null && memes[memeIndex] && <MemeOverlay meme={memes[memeIndex]} />}
+      {showMemeOverlay && <MemeOverlay meme={memes[memeIndex!]} />}
       <div style={S.page}>
         <style>{kf}</style>
         <div style={S.container}>
@@ -89,7 +119,7 @@ export function Play() {
 
   return (
     <>
-      {memeIndex !== null && memes[memeIndex] && <MemeOverlay meme={memes[memeIndex]} />}
+      {showMemeOverlay && <MemeOverlay meme={memes[memeIndex!]} />}
       <div style={S.page}>
         <style>{kf}</style>
         <div style={S.container}>
@@ -114,7 +144,7 @@ export function Play() {
           {!submitted ? (
             <div style={S.card}>
               <textarea value={answer} onChange={e => setAnswer(e.target.value)}
-                placeholder="Typ je antwoord hier…" rows={3} style={S.textarea} />
+                placeholder={isMC ? 'Typ alleen de letter (bv. B)…' : 'Typ je antwoord hier…'} rows={3} style={S.textarea} />
               <button onClick={submit} style={{ ...S.btnPrimary, marginTop: 12 }} disabled={!answer.trim()}>
                 ✉️ Verstuur antwoord
               </button>
@@ -122,19 +152,34 @@ export function Play() {
           ) : (
             <div style={S.submittedBox}>
               <div style={S.submittedLabel}>✅ VERSTUURD — goed bezig!</div>
-              <p style={S.submittedText}>{answer}</p>
+              <p style={S.submittedText}>{mySubmittedAnswer}</p>
             </div>
           )}
 
           {revealed && (
-            <div style={S.reveal}>
-              <div style={S.revealHeader}>✅ JUISTE ANTWOORD</div>
-              <p style={S.revealAnswer}>{q.answer}</p>
-              <div style={S.tipBox}>
-                <div style={S.tipHeader}>💡 Wist je dat?</div>
-                <p style={S.tipText}>{q.explanation}</p>
+            <>
+              {wasCorrect && (
+                <div style={S.correctBanner}>
+                  <div style={S.correctEmoji}>🎉🥳🎊</div>
+                  <h2 style={S.correctText}>GOED GEDAAN, {name.toUpperCase()}!</h2>
+                  <p style={S.correctSub}>Je had 'm goed! 🔥</p>
+                </div>
+              )}
+              {!wasCorrect && isMC && mySubmittedAnswer && (
+                <div style={S.tryAgainBanner}>
+                  <div style={S.tryEmoji}>💪</div>
+                  <p style={S.tryText}>Bijna! Lees de uitleg goed door.</p>
+                </div>
+              )}
+              <div style={S.reveal}>
+                <div style={S.revealHeader}>✅ JUISTE ANTWOORD</div>
+                <p style={S.revealAnswer}>{q.answer}</p>
+                <div style={S.tipBox}>
+                  <div style={S.tipHeader}>💡 Wist je dat?</div>
+                  <p style={S.tipText}>{q.explanation}</p>
+                </div>
               </div>
-            </div>
+            </>
           )}
         </div>
       </div>
@@ -175,6 +220,7 @@ const kf = `
 @keyframes pop { 0% { transform: scale(0.95); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 @keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: 200px 0; } }
 @keyframes wiggle { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-3deg); } 75% { transform: rotate(3deg); } }
+@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 button:hover:not(:disabled) { transform: translateY(-2px); transition: transform 0.15s; }
 button:active:not(:disabled) { transform: translateY(0px) scale(0.98); }
 `;
@@ -200,6 +246,13 @@ const S: Record<string, React.CSSProperties> = {
   submittedBox: { background: 'linear-gradient(135deg, #ede9fe, #ddd6fe)', border: '2px solid #a78bfa', borderRadius: 16, padding: 16, marginBottom: 16, animation: 'pop 0.3s ease-out' },
   submittedLabel: { fontSize: 12, fontWeight: 800, color: '#5b21b6', letterSpacing: 1 },
   submittedText: { margin: '6px 0 0', fontSize: 15, color: '#3b0764' },
+  correctBanner: { background: 'linear-gradient(135deg, #fbbf24, #f59e0b, #ec4899)', borderRadius: 20, padding: 24, marginBottom: 16, textAlign: 'center', color: 'white', boxShadow: '0 12px 32px rgba(251,191,36,0.4)', animation: 'pop 0.5s ease-out' },
+  correctEmoji: { fontSize: 48, marginBottom: 4, animation: 'bounce 0.8s ease-in-out infinite' },
+  correctText: { margin: '4px 0', fontSize: 24, fontWeight: 900, textShadow: '2px 2px 0px rgba(0,0,0,0.15)' },
+  correctSub: { margin: 0, fontSize: 16, fontWeight: 600, opacity: 0.95 },
+  tryAgainBanner: { background: '#fef3c7', border: '2px solid #fbbf24', borderRadius: 16, padding: 16, marginBottom: 16, textAlign: 'center', animation: 'pop 0.3s ease-out' },
+  tryEmoji: { fontSize: 32, marginBottom: 4 },
+  tryText: { margin: 0, fontSize: 15, fontWeight: 600, color: '#78350f' },
   reveal: { background: 'linear-gradient(135deg, #d1fae5, #a7f3d0)', border: '3px solid #34d399', borderRadius: 20, padding: 22, marginBottom: 16, animation: 'pop 0.4s ease-out' },
   revealHeader: { fontSize: 12, fontWeight: 800, color: '#065f46', letterSpacing: 1 },
   revealAnswer: { fontSize: 18, margin: '8px 0 16px', fontWeight: 700, color: '#064e3b' },
