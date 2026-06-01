@@ -33,7 +33,6 @@ export function Host() {
     return () => { supabase.removeChannel(ch); };
   }, []);
 
-  // Optimistic: update local state immediately, then fire DB update
   const update = async (u: any) => {
     if ('subject_id' in u) setSubjectId(u.subject_id);
     if ('current_question' in u) setCurrentQ(u.current_question);
@@ -55,59 +54,69 @@ export function Host() {
 
   return (
     <div style={S.page}>
+      <style>{kf}</style>
       <div style={S.container}>
-        <div style={S.header}>
-          <div>
-            <div style={S.eyebrow}>🎓 HOST · Daniel naar HAVO</div>
-            <h1 style={S.h1}>{subject.title}</h1>
-          </div>
-          <select value={subjectId} onChange={e => switchSubject(e.target.value)} style={S.select}>
-            {subjects.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
-          </select>
+        <div style={S.headerRow}>
+          <div style={S.badge}>🎓 HOST MODE</div>
+          <h1 style={S.h1}>Daniel naar HAVO 🚀</h1>
         </div>
+
+        <div style={S.chipRow}>
+          {subjects.map(s => (
+            <button key={s.id} onClick={() => switchSubject(s.id)}
+              style={{ ...S.chip, ...(s.id === subjectId ? S.chipActive : {}) }}>
+              {s.title.split('—')[0].trim()}
+            </button>
+          ))}
+        </div>
+
+        <div style={S.subjectTitle}>{subject.title}</div>
 
         <div style={S.progressBar}>
           <div style={{ ...S.progressFill, width: `${progress}%` }} />
         </div>
-        <div style={S.progressLabel}>Vraag {Math.min(currentQ + 1, total)} van {total}</div>
+        <div style={S.progressLabel}>
+          {!q ? '🎉 Klaar!' : `Vraag ${currentQ + 1} van ${total}`}
+        </div>
 
         {!q ? (
           <div style={S.card}>
-            <h2 style={{ marginTop: 0 }}>Klaar! 🎉</h2>
-            <p style={S.muted}>Je hebt alle vragen van deze sectie gehad.</p>
+            <h2 style={{ marginTop: 0, fontSize: 28 }}>🎉 Sectie klaar!</h2>
+            <p style={S.muted}>Goed bezig, kies een volgende sectie of begin opnieuw.</p>
             <button onClick={reset} style={S.btnPrimary}>↺ Opnieuw beginnen</button>
           </div>
         ) : (
           <>
             <div style={S.card}>
-              <div style={S.qNum}>VRAAG {currentQ + 1}</div>
+              <div style={S.qNum}>✏️ VRAAG {currentQ + 1}</div>
               <p style={S.qText}>{q.prompt}</p>
               {q.options && (
-                <ul style={S.options}>
-                  {q.options.map((o, i) => <li key={i} style={S.option}>{o}</li>)}
-                </ul>
+                <div style={S.optionsBox}>
+                  {q.options.map((o, i) => <div key={i} style={S.option}>{o}</div>)}
+                </div>
               )}
             </div>
 
             <div style={S.card}>
-              <h3 style={S.cardTitle}>Antwoorden ({qAns.length})</h3>
+              <h3 style={S.cardTitle}>📬 Antwoorden ({qAns.length})</h3>
               {qAns.length === 0
-                ? <p style={S.muted}>Nog niemand…</p>
-                : <ul style={S.answersList}>
-                    {qAns.map(a => (
-                      <li key={a.id} style={S.answerItem}>
-                        <b style={{ color: '#4f46e5' }}>{a.player_name}:</b> {a.answer}
-                      </li>
-                    ))}
-                  </ul>}
+                ? <p style={S.muted}>⏳ Wachten op antwoorden…</p>
+                : <div>{qAns.map(a => (
+                    <div key={a.id} style={S.answerItem}>
+                      <span style={S.answerName}>{a.player_name}</span>
+                      <span style={S.answerText}>{a.answer}</span>
+                    </div>
+                  ))}</div>}
             </div>
 
             {revealed && (
               <div style={S.reveal}>
-                <div style={S.revealLabel}>✅ JUISTE ANTWOORD</div>
+                <div style={S.revealHeader}>✅ JUISTE ANTWOORD</div>
                 <p style={S.revealAnswer}>{q.answer}</p>
-                <div style={S.revealLabel}>💡 UITLEG</div>
-                <p style={S.revealExpl}>{q.explanation}</p>
+                <div style={S.tipBox}>
+                  <div style={S.tipHeader}>💡 Wist je dat?</div>
+                  <p style={S.tipText}>{q.explanation}</p>
+                </div>
               </div>
             )}
 
@@ -124,30 +133,43 @@ export function Host() {
   );
 }
 
+const kf = `
+@keyframes pop { 0% { transform: scale(0.95); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
+@keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: 200px 0; } }
+button:hover { transform: translateY(-2px); transition: transform 0.15s; }
+button:active { transform: translateY(0px) scale(0.98); }
+`;
+
 const S: Record<string, React.CSSProperties> = {
-  page: { minHeight: '100vh', background: 'linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%)', fontFamily: 'system-ui, -apple-system, sans-serif', color: '#1f2937', padding: '24px 16px' },
+  page: { minHeight: '100vh', background: 'linear-gradient(135deg, #fef3c7 0%, #fce7f3 50%, #ddd6fe 100%)', fontFamily: '"Comic Sans MS", "Segoe UI", system-ui, sans-serif', color: '#1f2937', padding: '24px 16px' },
   container: { maxWidth: 720, margin: '0 auto' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 20, flexWrap: 'wrap' },
-  eyebrow: { fontSize: 12, color: '#6b7280', letterSpacing: 1, fontWeight: 600, textTransform: 'uppercase' },
-  h1: { fontSize: 24, margin: '4px 0 0', color: '#111827' },
-  select: { padding: '8px 12px', borderRadius: 8, border: '1px solid #d1d5db', background: 'white', fontSize: 14 },
-  progressBar: { height: 8, background: '#e5e7eb', borderRadius: 999, overflow: 'hidden', marginBottom: 6 },
-  progressFill: { height: '100%', background: 'linear-gradient(90deg, #4f46e5, #7c3aed)', transition: 'width 0.3s' },
-  progressLabel: { fontSize: 13, color: '#6b7280', marginBottom: 20 },
-  card: { background: 'white', borderRadius: 12, padding: 20, marginBottom: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
-  cardTitle: { margin: '0 0 12px', fontSize: 15, color: '#374151' },
-  qNum: { fontSize: 11, fontWeight: 700, color: '#6366f1', letterSpacing: 1, marginBottom: 8 },
-  qText: { fontSize: 18, margin: 0, lineHeight: 1.5 },
-  options: { listStyle: 'none', padding: 0, margin: '12px 0 0' },
-  option: { padding: '8px 0', borderTop: '1px solid #f3f4f6', fontSize: 15 },
-  answersList: { listStyle: 'none', padding: 0, margin: 0 },
-  answerItem: { padding: '10px 12px', background: '#f9fafb', borderRadius: 8, marginBottom: 8, fontSize: 14, lineHeight: 1.5 },
+  headerRow: { textAlign: 'center', marginBottom: 20 },
+  badge: { display: 'inline-block', background: '#fbbf24', color: '#78350f', padding: '4px 12px', borderRadius: 999, fontSize: 12, fontWeight: 800, letterSpacing: 1, marginBottom: 8 },
+  h1: { fontSize: 32, margin: 0, color: '#5b21b6', fontWeight: 900, textShadow: '2px 2px 0px #fde68a' },
+  chipRow: { display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 12 },
+  chip: { padding: '6px 14px', borderRadius: 999, border: '2px solid #c4b5fd', background: 'white', color: '#6d28d9', cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'inherit' },
+  chipActive: { background: '#7c3aed', color: 'white', borderColor: '#7c3aed', boxShadow: '0 4px 12px rgba(124,58,237,0.4)' },
+  subjectTitle: { textAlign: 'center', fontSize: 18, fontWeight: 700, color: '#5b21b6', marginBottom: 14 },
+  progressBar: { height: 14, background: 'rgba(255,255,255,0.6)', borderRadius: 999, overflow: 'hidden', marginBottom: 6, border: '2px solid #c4b5fd' },
+  progressFill: { height: '100%', background: 'linear-gradient(90deg, #ec4899, #f59e0b, #10b981)', backgroundSize: '200px 100%', animation: 'shimmer 2s linear infinite', transition: 'width 0.5s' },
+  progressLabel: { fontSize: 14, color: '#6d28d9', marginBottom: 20, textAlign: 'center', fontWeight: 600 },
+  card: { background: 'white', borderRadius: 20, padding: 22, marginBottom: 16, boxShadow: '0 8px 24px rgba(124,58,237,0.12)', animation: 'pop 0.3s ease-out' },
+  cardTitle: { margin: '0 0 12px', fontSize: 17, color: '#5b21b6', fontWeight: 700 },
+  qNum: { fontSize: 12, fontWeight: 800, color: '#ec4899', letterSpacing: 1, marginBottom: 8 },
+  qText: { fontSize: 20, margin: 0, lineHeight: 1.5, color: '#1f2937', fontWeight: 500 },
+  optionsBox: { marginTop: 14 },
+  option: { padding: '12px 14px', background: '#faf5ff', borderRadius: 12, marginBottom: 8, fontSize: 16, color: '#374151', border: '1px solid #e9d5ff' },
+  answerItem: { display: 'flex', flexDirection: 'column', gap: 4, padding: '12px 14px', background: 'linear-gradient(135deg, #fef3c7, #fde68a)', borderRadius: 12, marginBottom: 8 },
+  answerName: { fontWeight: 800, color: '#92400e', fontSize: 14 },
+  answerText: { fontSize: 15, color: '#451a03' },
   muted: { color: '#9ca3af', margin: 0 },
-  reveal: { background: 'linear-gradient(135deg, #d1fae5, #ecfdf5)', border: '1px solid #6ee7b7', borderRadius: 12, padding: 20, marginBottom: 16 },
-  revealLabel: { fontSize: 11, fontWeight: 700, color: '#047857', letterSpacing: 1, marginTop: 4 },
-  revealAnswer: { fontSize: 16, margin: '4px 0 12px', fontWeight: 600, color: '#064e3b' },
-  revealExpl: { fontSize: 14, margin: '4px 0 0', color: '#065f46', lineHeight: 1.6 },
-  actions: { display: 'flex', gap: 8, marginTop: 8 },
-  btnPrimary: { padding: '12px 20px', fontSize: 15, border: 'none', borderRadius: 8, background: '#4f46e5', color: 'white', cursor: 'pointer', fontWeight: 600, flex: 1 },
-  btnSecondary: { padding: '12px 20px', fontSize: 15, border: '1px solid #d1d5db', borderRadius: 8, background: 'white', color: '#4b5563', cursor: 'pointer', fontWeight: 500 },
+  reveal: { background: 'linear-gradient(135deg, #d1fae5, #a7f3d0)', border: '3px solid #34d399', borderRadius: 20, padding: 22, marginBottom: 16, animation: 'pop 0.4s ease-out' },
+  revealHeader: { fontSize: 12, fontWeight: 800, color: '#065f46', letterSpacing: 1 },
+  revealAnswer: { fontSize: 18, margin: '8px 0 16px', fontWeight: 700, color: '#064e3b' },
+  tipBox: { background: '#fff7ed', border: '2px dashed #fb923c', borderRadius: 14, padding: 14 },
+  tipHeader: { fontSize: 12, fontWeight: 800, color: '#c2410c', letterSpacing: 1 },
+  tipText: { fontSize: 15, margin: '6px 0 0', color: '#7c2d12', lineHeight: 1.6 },
+  actions: { display: 'flex', gap: 10, marginTop: 8 },
+  btnPrimary: { padding: '14px 22px', fontSize: 16, border: 'none', borderRadius: 14, background: 'linear-gradient(135deg, #7c3aed, #ec4899)', color: 'white', cursor: 'pointer', fontWeight: 800, flex: 1, fontFamily: 'inherit', boxShadow: '0 6px 16px rgba(124,58,237,0.35)' },
+  btnSecondary: { padding: '14px 18px', fontSize: 15, border: '2px solid #c4b5fd', borderRadius: 14, background: 'white', color: '#6d28d9', cursor: 'pointer', fontWeight: 700, fontFamily: 'inherit' },
 };

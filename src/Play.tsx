@@ -46,13 +46,15 @@ export function Play() {
 
   if (!nameSet) return (
     <div style={S.page}>
-      <div style={{ ...S.container, maxWidth: 440, marginTop: 60 }}>
-        <div style={S.card}>
-          <div style={S.eyebrow}>👋 Welkom</div>
-          <h1 style={S.h1}>Wie ben je?</h1>
-          <input value={name} onChange={e => setName(e.target.value)} placeholder="Jouw naam"
-            style={S.input} />
-          <button onClick={saveName} disabled={!name.trim()} style={S.btnPrimary}>Start</button>
+      <style>{kf}</style>
+      <div style={{ ...S.container, maxWidth: 440, marginTop: 80 }}>
+        <div style={S.welcomeCard}>
+          <div style={S.welcomeEmoji}>📚✨</div>
+          <h1 style={S.h1}>Daniel naar HAVO!</h1>
+          <p style={S.welcomeSub}>Wie ben je, kampioen?</p>
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="Typ je naam…"
+            style={S.input} onKeyDown={(e) => e.key === 'Enter' && name.trim() && saveName()} />
+          <button onClick={saveName} disabled={!name.trim()} style={S.btnPrimary}>Let's go! 🚀</button>
         </div>
       </div>
     </div>
@@ -65,10 +67,11 @@ export function Play() {
 
   if (!q) return (
     <div style={S.page}>
+      <style>{kf}</style>
       <div style={S.container}>
         <div style={S.card}>
-          <h2>Klaar! 🎉</h2>
-          <p style={S.muted}>Wacht tot de host de volgende sectie start.</p>
+          <h2 style={{ fontSize: 28, margin: 0 }}>🎉 Sectie klaar!</h2>
+          <p style={S.muted}>Wacht op de volgende sectie…</p>
         </div>
       </div>
     </div>
@@ -76,49 +79,49 @@ export function Play() {
 
   return (
     <div style={S.page}>
+      <style>{kf}</style>
       <div style={S.container}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 2 }}>
-          <img src="/daniel.jpg" alt="daniel" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid #e5e7eb' }} />
-          <div style={S.eyebrow}>Hoi {name} 👋</div>
-        </div>
+        <div style={S.greeting}>Hoi <b>{name}</b> 👋</div>
         <h1 style={S.h1}>{subject.title}</h1>
 
         <div style={S.progressBar}>
           <div style={{ ...S.progressFill, width: `${progress}%` }} />
         </div>
-        <div style={S.progressLabel}>Vraag {Math.min(currentQ + 1, total)} van {total}</div>
+        <div style={S.progressLabel}>Vraag {currentQ + 1} van {total} 💪</div>
 
         <div style={S.card}>
-          <div style={S.qNum}>VRAAG {currentQ + 1}</div>
+          <div style={S.qNum}>✏️ VRAAG {currentQ + 1}</div>
           <p style={S.qText}>{q.prompt}</p>
           {q.options && (
-            <ul style={S.options}>
-              {q.options.map((o, i) => <li key={i} style={S.option}>{o}</li>)}
-            </ul>
+            <div style={S.optionsBox}>
+              {q.options.map((o, i) => <div key={i} style={S.option}>{o}</div>)}
+            </div>
           )}
         </div>
 
         {!submitted ? (
           <div style={S.card}>
             <textarea value={answer} onChange={e => setAnswer(e.target.value)}
-              placeholder="Jouw antwoord…" rows={3} style={S.textarea} />
+              placeholder="Typ je antwoord hier…" rows={3} style={S.textarea} />
             <button onClick={submit} style={{ ...S.btnPrimary, marginTop: 12 }} disabled={!answer.trim()}>
-              Verstuur
+              ✉️ Verstuur antwoord
             </button>
           </div>
         ) : (
           <div style={S.submittedBox}>
-            <div style={S.submittedLabel}>✅ VERSTUURD</div>
+            <div style={S.submittedLabel}>✅ VERSTUURD — goed bezig!</div>
             <p style={S.submittedText}>{answer}</p>
           </div>
         )}
 
         {revealed && (
           <div style={S.reveal}>
-            <div style={S.revealLabel}>✅ JUISTE ANTWOORD</div>
+            <div style={S.revealHeader}>✅ JUISTE ANTWOORD</div>
             <p style={S.revealAnswer}>{q.answer}</p>
-            <div style={S.revealLabel}>💡 UITLEG</div>
-            <p style={S.revealExpl}>{q.explanation}</p>
+            <div style={S.tipBox}>
+              <div style={S.tipHeader}>💡 Wist je dat?</div>
+              <p style={S.tipText}>{q.explanation}</p>
+            </div>
           </div>
         )}
       </div>
@@ -126,28 +129,41 @@ export function Play() {
   );
 }
 
+const kf = `
+@keyframes pop { 0% { transform: scale(0.95); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: 200px 0; } }
+@keyframes wiggle { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-3deg); } 75% { transform: rotate(3deg); } }
+button:hover:not(:disabled) { transform: translateY(-2px); transition: transform 0.15s; }
+button:active:not(:disabled) { transform: translateY(0px) scale(0.98); }
+`;
+
 const S: Record<string, React.CSSProperties> = {
-  page: { minHeight: '100vh', background: 'linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%)', fontFamily: 'system-ui, -apple-system, sans-serif', color: '#1f2937', padding: '24px 16px' },
+  page: { minHeight: '100vh', background: 'linear-gradient(135deg, #fef3c7 0%, #fce7f3 50%, #ddd6fe 100%)', fontFamily: '"Comic Sans MS", "Segoe UI", system-ui, sans-serif', color: '#1f2937', padding: '24px 16px' },
   container: { maxWidth: 600, margin: '0 auto' },
-  eyebrow: { fontSize: 12, color: '#6b7280', letterSpacing: 1, fontWeight: 600, textTransform: 'uppercase' },
-  h1: { fontSize: 24, margin: '4px 0 16px', color: '#111827' },
-  progressBar: { height: 8, background: '#e5e7eb', borderRadius: 999, overflow: 'hidden', marginBottom: 6 },
-  progressFill: { height: '100%', background: 'linear-gradient(90deg, #4f46e5, #7c3aed)', transition: 'width 0.3s' },
-  progressLabel: { fontSize: 13, color: '#6b7280', marginBottom: 20 },
-  card: { background: 'white', borderRadius: 12, padding: 20, marginBottom: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
-  qNum: { fontSize: 11, fontWeight: 700, color: '#6366f1', letterSpacing: 1, marginBottom: 8 },
-  qText: { fontSize: 18, margin: 0, lineHeight: 1.5 },
-  options: { listStyle: 'none', padding: 0, margin: '12px 0 0' },
-  option: { padding: '10px 0', borderTop: '1px solid #f3f4f6', fontSize: 15 },
-  input: { width: '100%', padding: 12, fontSize: 16, marginTop: 12, marginBottom: 12, borderRadius: 8, border: '1px solid #d1d5db', boxSizing: 'border-box' },
-  textarea: { width: '100%', padding: 12, fontSize: 16, borderRadius: 8, border: '1px solid #d1d5db', fontFamily: 'inherit', boxSizing: 'border-box', resize: 'vertical' },
-  submittedBox: { background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 12, padding: 16, marginBottom: 16 },
-  submittedLabel: { fontSize: 11, fontWeight: 700, color: '#4338ca', letterSpacing: 1 },
-  submittedText: { margin: '6px 0 0', fontSize: 15 },
-  reveal: { background: 'linear-gradient(135deg, #d1fae5, #ecfdf5)', border: '1px solid #6ee7b7', borderRadius: 12, padding: 20, marginBottom: 16 },
-  revealLabel: { fontSize: 11, fontWeight: 700, color: '#047857', letterSpacing: 1, marginTop: 4 },
-  revealAnswer: { fontSize: 16, margin: '4px 0 12px', fontWeight: 600, color: '#064e3b' },
-  revealExpl: { fontSize: 14, margin: '4px 0 0', color: '#065f46', lineHeight: 1.6 },
+  welcomeCard: { background: 'white', borderRadius: 24, padding: 32, textAlign: 'center', boxShadow: '0 20px 50px rgba(124,58,237,0.18)' },
+  welcomeEmoji: { fontSize: 56, marginBottom: 8, animation: 'wiggle 2s ease-in-out infinite' },
+  welcomeSub: { fontSize: 16, color: '#6b7280', margin: '4px 0 16px' },
+  greeting: { fontSize: 15, color: '#5b21b6', marginBottom: 4, fontWeight: 600 },
+  h1: { fontSize: 26, margin: '4px 0 16px', color: '#5b21b6', fontWeight: 900, textShadow: '2px 2px 0px #fde68a' },
+  progressBar: { height: 14, background: 'rgba(255,255,255,0.6)', borderRadius: 999, overflow: 'hidden', marginBottom: 6, border: '2px solid #c4b5fd' },
+  progressFill: { height: '100%', background: 'linear-gradient(90deg, #ec4899, #f59e0b, #10b981)', backgroundSize: '200px 100%', animation: 'shimmer 2s linear infinite', transition: 'width 0.5s' },
+  progressLabel: { fontSize: 14, color: '#6d28d9', marginBottom: 20, textAlign: 'center', fontWeight: 600 },
+  card: { background: 'white', borderRadius: 20, padding: 22, marginBottom: 16, boxShadow: '0 8px 24px rgba(124,58,237,0.12)', animation: 'pop 0.3s ease-out' },
+  qNum: { fontSize: 12, fontWeight: 800, color: '#ec4899', letterSpacing: 1, marginBottom: 8 },
+  qText: { fontSize: 20, margin: 0, lineHeight: 1.5, color: '#1f2937', fontWeight: 500 },
+  optionsBox: { marginTop: 14 },
+  option: { padding: '12px 14px', background: '#faf5ff', borderRadius: 12, marginBottom: 8, fontSize: 16, color: '#374151', border: '1px solid #e9d5ff' },
+  input: { width: '100%', padding: 14, fontSize: 17, marginTop: 8, marginBottom: 14, borderRadius: 14, border: '2px solid #c4b5fd', boxSizing: 'border-box', fontFamily: 'inherit', textAlign: 'center' },
+  textarea: { width: '100%', padding: 14, fontSize: 16, borderRadius: 14, border: '2px solid #c4b5fd', fontFamily: 'inherit', boxSizing: 'border-box', resize: 'vertical' },
+  submittedBox: { background: 'linear-gradient(135deg, #ede9fe, #ddd6fe)', border: '2px solid #a78bfa', borderRadius: 16, padding: 16, marginBottom: 16, animation: 'pop 0.3s ease-out' },
+  submittedLabel: { fontSize: 12, fontWeight: 800, color: '#5b21b6', letterSpacing: 1 },
+  submittedText: { margin: '6px 0 0', fontSize: 15, color: '#3b0764' },
+  reveal: { background: 'linear-gradient(135deg, #d1fae5, #a7f3d0)', border: '3px solid #34d399', borderRadius: 20, padding: 22, marginBottom: 16, animation: 'pop 0.4s ease-out' },
+  revealHeader: { fontSize: 12, fontWeight: 800, color: '#065f46', letterSpacing: 1 },
+  revealAnswer: { fontSize: 18, margin: '8px 0 16px', fontWeight: 700, color: '#064e3b' },
+  tipBox: { background: '#fff7ed', border: '2px dashed #fb923c', borderRadius: 14, padding: 14 },
+  tipHeader: { fontSize: 12, fontWeight: 800, color: '#c2410c', letterSpacing: 1 },
+  tipText: { fontSize: 15, margin: '6px 0 0', color: '#7c2d12', lineHeight: 1.6 },
   muted: { color: '#9ca3af' },
-  btnPrimary: { padding: '12px 20px', fontSize: 15, border: 'none', borderRadius: 8, background: '#4f46e5', color: 'white', cursor: 'pointer', fontWeight: 600, width: '100%' },
+  btnPrimary: { padding: '14px 22px', fontSize: 16, border: 'none', borderRadius: 14, background: 'linear-gradient(135deg, #7c3aed, #ec4899)', color: 'white', cursor: 'pointer', fontWeight: 800, width: '100%', fontFamily: 'inherit', boxShadow: '0 6px 16px rgba(124,58,237,0.35)' },
 };
