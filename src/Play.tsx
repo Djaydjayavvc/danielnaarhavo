@@ -77,7 +77,10 @@ export function Play() {
   return (
     <div style={S.page}>
       <div style={S.container}>
-        <div style={S.eyebrow}>Hoi {name} 👋</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 2 }}>
+          <img src="/daniel.jpg" alt="daniel" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid #e5e7eb' }} />
+          <div style={S.eyebrow}>Hoi {name} 👋</div>
+        </div>
         <h1 style={S.h1}>{subject.title}</h1>
 
         <div style={S.progressBar}>
