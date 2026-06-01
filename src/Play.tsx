@@ -34,6 +34,12 @@ export function Play() {
   const [bondingSubmitted, setBondingSubmitted] = useState(false);
   const [bondingAnswers, setBondingAnswers] = useState<any[]>([]);
   const celebratedFor = useRef<string | null>(null);
+  const subjectIdRef = useRef(subjectId);
+  const currentQRef = useRef(currentQ);
+  const bondingIndexRef = useRef(bondingIndex);
+  subjectIdRef.current = subjectId;
+  currentQRef.current = currentQ;
+  bondingIndexRef.current = bondingIndex;
 
   useEffect(() => {
     supabase.from('dnh_quiz_state').select('*').eq('id', 1).single()
@@ -57,9 +63,9 @@ export function Play() {
         })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'dnh_quiz_state' },
         (p: any) => {
-          const changed = p.new.subject_id !== subjectId || p.new.current_question !== currentQ;
+          const changed = p.new.subject_id !== subjectIdRef.current || p.new.current_question !== currentQRef.current;
           if (changed) { setSubmitted(false); setAnswer(''); setMySubmittedAnswer(''); }
-          if (p.new.bonding_index !== bondingIndex) {
+          if (p.new.bonding_index !== bondingIndexRef.current) {
             setBondingAnswer('');
             setBondingSubmitted(false);
           }
@@ -71,7 +77,7 @@ export function Play() {
         })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [subjectId, currentQ, bondingIndex]);
+  }, []);
 
   const subject = subjects.find(s => s.id === subjectId) || subjects[0];
   const q = subject.questions[currentQ];
