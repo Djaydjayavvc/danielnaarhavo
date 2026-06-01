@@ -139,7 +139,7 @@ export function Host() {
               <button onClick={reset} style={S.btnSecondary}>↺ Reset</button>
             </div>
             <div style={{ marginTop: 8, fontSize: 12, color: '#6b7280' }}>
-              Specifieke meme: {memes.map((m, i) => (
+              Specifieke meme: {memes.map((_m, i) => (
                 <button key={i} onClick={() => showMeme(i)} style={S.memePill}>{i + 1}</button>
               ))}
             </div>
