@@ -310,7 +310,7 @@ const S: Record<string, React.CSSProperties> = {
   welcomeSub: { fontSize: 16, color: '#6b7280', margin: '4px 0 16px' },
   greeting: { fontSize: 15, color: '#5b21b6', marginBottom: 4, fontWeight: 600 },
   futureWrap: { display: 'flex', flexDirection: 'column' as const, alignItems: 'center', marginBottom: 16, gap: 10 },
-  futureImg: { width: '100%', maxWidth: 420, borderRadius: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.3)' },
+  futureImg: { width: '100%', maxWidth: 210, borderRadius: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.3)' },
   futureCaption: { fontSize: 15, color: '#7c3aed', fontStyle: 'italic', fontWeight: 600, textAlign: 'center' as const },
   h1: { fontSize: 26, margin: '4px 0 16px', color: '#5b21b6', fontWeight: 900, textShadow: '2px 2px 0px #fde68a' },
   danielNote: { textAlign: 'center', background: 'linear-gradient(135deg, #fef3c7, #fde68a)', border: '2px dashed #f59e0b', borderRadius: 14, padding: '10px 16px', fontSize: 14, fontWeight: 700, color: '#92400e', marginBottom: 14 },
