@@ -203,6 +203,10 @@ export function Play() {
         <style>{kf}</style>
         <div style={S.container}>
           <div style={S.greeting}>Hoi <b>{name}</b> 👋</div>
+          <div style={S.futureWrap}>
+            <img src="/file_0000000029b0720ab2de24e89c094009.png" alt="Future Daniel" style={S.futureImg} />
+            <div style={S.futureCaption}>Hello Daniel, its you from the future :) See you later</div>
+          </div>
           <h1 style={S.h1}>{subject.title}</h1>
           <div style={S.danielNote}>🥩 Score boven de 7? Dan trakteer ik op de beste rib eye!</div>
 
@@ -305,6 +309,9 @@ const S: Record<string, React.CSSProperties> = {
   welcomeEmoji: { fontSize: 56, marginBottom: 8, animation: 'wiggle 2s ease-in-out infinite' },
   welcomeSub: { fontSize: 16, color: '#6b7280', margin: '4px 0 16px' },
   greeting: { fontSize: 15, color: '#5b21b6', marginBottom: 4, fontWeight: 600 },
+  futureWrap: { display: 'flex', flexDirection: 'column' as const, alignItems: 'center', marginBottom: 16, gap: 10 },
+  futureImg: { width: '100%', maxWidth: 420, borderRadius: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.3)' },
+  futureCaption: { fontSize: 15, color: '#7c3aed', fontStyle: 'italic', fontWeight: 600, textAlign: 'center' as const },
   h1: { fontSize: 26, margin: '4px 0 16px', color: '#5b21b6', fontWeight: 900, textShadow: '2px 2px 0px #fde68a' },
   danielNote: { textAlign: 'center', background: 'linear-gradient(135deg, #fef3c7, #fde68a)', border: '2px dashed #f59e0b', borderRadius: 14, padding: '10px 16px', fontSize: 14, fontWeight: 700, color: '#92400e', marginBottom: 14 },
   bondingBanner: { textAlign: 'center', background: 'linear-gradient(135deg, #f472b6, #c084fc)', color: 'white', padding: '10px 16px', borderRadius: 999, fontSize: 13, fontWeight: 800, letterSpacing: 1, marginBottom: 16, boxShadow: '0 6px 16px rgba(192,132,252,0.4)' },
