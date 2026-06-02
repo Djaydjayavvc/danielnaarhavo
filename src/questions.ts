@@ -158,5 +158,101 @@ export const subjects: Subject[] = [
       { prompt: "Welke combinatie is GEEN bewijs voor evolutie?", options: ["A. Fossielen die geleidelijke veranderingen tonen", "B. DNA-overeenkomsten tussen verschillende soorten", "C. Homologe organen (zelfde botten in mens, walvis, vleermuis)", "D. Dat alle dieren ogen hebben"], answer: "D", explanation: "A, B en C zijn klassieke evolutiebewijzen. D klopt niet eens (lang niet alle dieren hebben ogen), en al hadden ze die wél, dan zou dat geen bewijs zijn. Convergente evolutie kan vergelijkbare structuren bij niet-verwante soorten verklaren." },
       { prompt: "Vroeger gebruikten artsen veel verschillende antibiotica. Nu werken sommige antibiotica nauwelijks meer tegen bacteriële infecties. Leg uit waarom — en wat dit betekent voor de geneeskunde.", answer: "Bacteriën met een toevallige mutatie die hen resistent maakt, overleefden de antibiotica. Die plantten zich voort. Na vele generaties zijn de meeste bacteriën resistent. Dit is natuurlijke selectie in versneld tempo. Voor de geneeskunde betekent dit dat infecties die vroeger makkelijk te behandelen waren, nu weer dodelijk kunnen zijn — en dat we constant nieuwe antibiotica moeten ontwikkelen.", explanation: "Antibioticaresistentie is een van de grootste medische problemen van deze eeuw. Levend bewijs dat evolutie nu nog steeds gebeurt." }
     ]
+  },
+  {
+    id: "bio-proefexamen",
+    title: "👑 Proefexamen — H3 (zwaarste)",
+    questions: [
+      {
+        prompt: "Op een eiland leven twee groepen hagedissen die er bijna identiek uitzien. Ze paren nooit met elkaar, en als wetenschappers ze tóch kruisen, komen de eitjes nooit uit. Zijn het dezelfde soort? Leg je antwoord uit met de soortdefinitie.",
+        answer: "Nee, het zijn geen dezelfde soort. De soortdefinitie zegt: dezelfde soort = samen vruchtbare nakomelingen kunnen krijgen. Deze hagedissen krijgen geen levensvatbare (laat staan vruchtbare) nakomelingen, dus zijn het twee aparte soorten. Dat ze er hetzelfde uitzien maakt niet uit — uiterlijk telt niet mee.",
+        explanation: "Veel leerlingen kijken naar uiterlijk. De truc: lees altijd of er sprake is van vruchtbare nakomelingen. Hier komen de eitjes niet eens uit → twee soorten."
+      },
+      {
+        prompt: "Een chihuahua en een Deense dog zien er totaal verschillend uit, maar zijn dezelfde soort. Welke uitspraak klopt?",
+        options: [
+          "A. Alleen uiterlijk bepaalt of dieren dezelfde soort zijn",
+          "B. Het zijn dezelfde soort omdat ze samen vruchtbare pups kunnen krijgen",
+          "C. Verschillende hondenrassen zijn altijd aparte soorten",
+          "D. Een chihuahua hoort bij een ander rijk dan een Deense dog"
+        ],
+        answer: "B",
+        explanation: "Binnen één soort kan het uiterlijk enorm verschillen (denk aan hondenrassen), maar zolang ze samen vruchtbare nakomelingen krijgen, blijven het dezelfde soort. Uiterlijk zegt dus weinig."
+      },
+      {
+        prompt: "In een sloot leven 12 diersoorten. Een boer loost mest in de sloot. Algen gaan enorm groeien, het water wordt troebel, en na een jaar leven er nog maar 3 soorten. Leg in stappen uit hoe de mest tot lagere biodiversiteit leidde.",
+        answer: "1) De mest (voedingsstoffen) zorgt voor een enorme algengroei. 2) Het water wordt troebel, waardoor er weinig licht onder water komt. 3) Waterplanten krijgen te weinig licht en sterven af. 4) Bij de afbraak van dode algen en planten verbruiken bacteriën veel zuurstof. 5) Er ontstaat zuurstoftekort in het water. 6) Dieren die veel zuurstof nodig hebben sterven → de biodiversiteit daalt.",
+        explanation: "Dit heet eutrofiëring (overbemesting). Let op de causale keten: mest → algen → minder licht → planten dood → zuurstoftekort → dieren dood. Bij dit soort vragen krijg je punten per stap."
+      },
+      {
+        prompt: "Waarom is een tropisch regenwoud met 300 boomsoorten beter bestand tegen een nieuwe boomziekte dan een dennenbos met maar 1 soort?",
+        options: [
+          "A. Omdat regenwouden warmer zijn",
+          "B. Bij hoge biodiversiteit treft één ziekte meestal niet alle soorten tegelijk",
+          "C. Omdat dennen van nature zwakker zijn",
+          "D. Omdat een regenwoud meer regen krijgt"
+        ],
+        answer: "B",
+        explanation: "Een ziekte is vaak gespecialiseerd op één soort. Met 300 soorten overleeft het bos, ook al sterft er één soort. Met 1 soort kan het hele bos verdwijnen — daarom zijn monoculturen kwetsbaar."
+      },
+      {
+        prompt: "Vóór 1850 waren bijna alle berkenspanners (nachtvlinders) licht gekleurd. Tijdens de industriële revolutie werden boomstammen zwart van het roet, en rond 1900 was ~95% van de vlinders zwart. Toen de luchtvervuiling later daalde, werden ze weer lichter. Leg met natuurlijke selectie uit waarom de vlinders eerst donker en daarna weer licht werden.",
+        answer: "Op lichte boomschors vallen lichte vlinders weg (camouflage) en worden donkere makkelijk opgegeten door vogels → lichte vlinders overleven en planten zich voort. Toen de stammen zwart werden door roet, was het andersom: donkere vlinders waren gecamoufleerd en lichte vielen op → donkere overleefden en namen toe. Toen de vervuiling daalde en de schors weer licht werd, hadden lichte vlinders weer voordeel → ze namen weer toe.",
+        explanation: "Klassiek schoolvoorbeeld van natuurlijke selectie. De omgeving (kleur van de schors) bepaalt welke variant het beste gecamoufleerd is tegen roofvogels. De variatie (licht/donker) bestond al."
+      },
+      {
+        prompt: "Een populatie bacteriën wordt blootgesteld aan een antibioticum. Welke uitspraak klopt volgens de evolutietheorie?",
+        options: [
+          "A. De bacteriën passen zich aan door het antibioticum en worden resistent",
+          "B. Bacteriën die door een toevallige mutatie al resistent waren, overleven en planten zich voort",
+          "C. Alle bacteriën worden een beetje resistenter",
+          "D. Het antibioticum verandert het DNA van de bacteriën zodat ze resistent worden"
+        ],
+        answer: "B",
+        explanation: "De grote valkuil: resistentie ontstaat NIET dóór het antibioticum (dat is de foute theorie van Lamarck). De resistente variant bestond al door toevallige mutatie. Het antibioticum selecteert alleen wie overleeft."
+      },
+      {
+        prompt: "In een rotswand zie je 3 lagen met fossielen. Onderste laag: alleen schelpdieren. Middelste laag: schelpdieren én vissen. Bovenste laag: schelpdieren, vissen én amfibieën. Wat kun je hieruit afleiden over de volgorde waarin deze diergroepen ontstonden? Leg uit.",
+        answer: "Diepere (onderste) aardlagen zijn ouder dan lagen erboven. Dus: schelpdieren ontstonden het eerst, daarna pas de vissen, en als laatste de amfibieën. De volgorde van de lagen laat de volgorde van ontstaan in de tijd zien.",
+        explanation: "Dit is het principe dat oudere lagen onderaan liggen. Door fossielen in opeenvolgende lagen te vergelijken, zie je hoe nieuwe diergroepen na elkaar verschenen — bewijs voor evolutie."
+      },
+      {
+        prompt: "Mens en muis hebben een gemeenschappelijke voorouder die ~80 miljoen jaar geleden leefde. Mens en kikker hebben een gemeenschappelijke voorouder die ~350 miljoen jaar geleden leefde. Welke conclusie klopt?",
+        options: [
+          "A. De mens stamt af van de muis",
+          "B. Mens en muis zijn nauwer verwant dan mens en kikker",
+          "C. De kikker is 'primitiever' dan de muis",
+          "D. Mens, muis en kikker zijn even nauw verwant"
+        ],
+        answer: "B",
+        explanation: "Hoe recenter de gemeenschappelijke voorouder, hoe nauwer de verwantschap. 80 miljoen jaar (mens-muis) is recenter dan 350 miljoen (mens-kikker), dus mens en muis zijn nauwer verwant. Let op: de mens stamt NIET áf van de muis."
+      },
+      {
+        prompt: "Stel je de hele geschiedenis van de aarde voor als één etmaal van 24 uur. Het eerste leven verschijnt al rond 4:00 uur 's ochtends, maar de mens pas een paar seconden vóór middernacht. Wat zegt dit over hoe snel of langzaam complex leven is ontstaan? Leg uit.",
+        answer: "Eenvoudig, eencellig leven ontstond relatief vroeg/snel. Maar het duurde daarna miljarden jaren voordat daaruit complex, meercellig leven (planten, dieren en uiteindelijk de mens) evolueerde. De ontwikkeling van complexiteit ging dus heel langzaam en besloeg bijna de hele geschiedenis van de aarde.",
+        explanation: "Belangrijk inzicht: 'leven' is oud, maar 'complex leven' en de mens zijn juist heel recent. Evolutie van eenvoudig naar complex kost gigantisch veel tijd."
+      },
+      {
+        prompt: "Welke gebeurtenis kwam het EERST?",
+        options: [
+          "A. De eerste bloeiende planten",
+          "B. De eerste vissen",
+          "C. De eerste eencellige bacteriën in zee",
+          "D. De eerste landdieren"
+        ],
+        answer: "C",
+        explanation: "Het allereerste leven waren eencellige bacteriën in de zee (~3,8 miljard jaar geleden). Pas veel later kwamen vissen, daarna landdieren, en als laatste bloeiende planten."
+      },
+      {
+        prompt: "Een rivier verandert van loop en splitst een populatie eekhoorns in twee groepen die elkaar nooit meer kunnen bereiken. Beschrijf stap voor stap hoe hieruit na heel lange tijd twee verschillende soorten kunnen ontstaan.",
+        answer: "1) De twee groepen raken geïsoleerd door de rivier — er is geen contact en geen voortplanting tussen de groepen meer. 2) Elke groep leeft in een iets andere omgeving en krijgt andere mutaties. 3) Door natuurlijke selectie passen de groepen zich elk anders aan. 4) Over heel veel generaties worden de verschillen steeds groter. 5) Uiteindelijk zijn ze zo verschillend dat ze, ook als ze elkaar weer zouden tegenkomen, geen vruchtbare nakomelingen meer kunnen krijgen → twee aparte soorten.",
+        explanation: "Dit is soortvorming door isolatie. Onthoud de ingrediënten: isolatie + verschillende selectie/mutaties + heel veel tijd → nieuwe soorten."
+      },
+      {
+        prompt: "Op eiland A groeien vooral grote, harde zaden; op eiland B kleine, zachte zaden. Op beide eilanden leeft dezelfde vogelsoort. Voorspel wat er na duizenden generaties met de snavels gebeurt, leg het uit met natuurlijke selectie, en zeg of er twee soorten kunnen ontstaan.",
+        answer: "Op eiland A overleven vogels met grote, sterke snavels beter, want die kunnen harde zaden kraken → na generaties hebben de vogels daar grote snavels. Op eiland B hebben vogels met kleine, fijne snavels voordeel → daar ontstaan kleine snavels. Omdat de twee groepen geïsoleerd zijn en verschillend evolueren, kunnen er uiteindelijk twee aparte soorten ontstaan (als ze geen vruchtbare nakomelingen meer met elkaar kunnen krijgen).",
+        explanation: "Dit is precies wat Darwin zag bij de Galápagos-vinken: verschillend voedsel → verschillende selectiedruk → verschillende snavels → mogelijk nieuwe soorten. Combineert natuurlijke selectie (3.3) met soortvorming (3.6)."
+      }
+    ]
   }
 ];
