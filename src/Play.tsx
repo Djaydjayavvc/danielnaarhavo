@@ -311,7 +311,7 @@ const S: Record<string, React.CSSProperties> = {
   greeting: { fontSize: 15, color: '#5b21b6', marginBottom: 4, fontWeight: 600 },
   futureWrap: { display: 'flex', flexDirection: 'column' as const, alignItems: 'center', marginBottom: 16, gap: 10 },
   futureImg: { width: '100%', maxWidth: 210, borderRadius: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.3)' },
-  futureCaption: { fontSize: 15, color: '#7c3aed', fontStyle: 'italic', fontWeight: 600, textAlign: 'center' as const },
+  futureCaption: { fontSize: 15, color: '#7c3aed', fontStyle: 'italic', fontWeight: 500, textAlign: 'center' as const, fontFamily: 'Georgia, "Times New Roman", serif', letterSpacing: '0.02em' },
   h1: { fontSize: 26, margin: '4px 0 16px', color: '#5b21b6', fontWeight: 900, textShadow: '2px 2px 0px #fde68a' },
   danielNote: { textAlign: 'center', background: 'linear-gradient(135deg, #fef3c7, #fde68a)', border: '2px dashed #f59e0b', borderRadius: 14, padding: '10px 16px', fontSize: 14, fontWeight: 700, color: '#92400e', marginBottom: 14 },
   bondingBanner: { textAlign: 'center', background: 'linear-gradient(135deg, #f472b6, #c084fc)', color: 'white', padding: '10px 16px', borderRadius: 999, fontSize: 13, fontWeight: 800, letterSpacing: 1, marginBottom: 16, boxShadow: '0 6px 16px rgba(192,132,252,0.4)' },
