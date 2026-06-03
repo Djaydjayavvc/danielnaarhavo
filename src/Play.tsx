@@ -4,6 +4,7 @@ import { subjects } from './questions';
 import { memes } from './memes';
 import { bondingQuestions } from './bonding';
 import confetti from 'canvas-confetti';
+import { SummaryButton } from './SummaryButton';
 
 function checkCorrect(playerAnswer: string, correctAnswer: string, isMC: boolean) {
   if (!isMC) return false;
@@ -201,6 +202,7 @@ export function Play() {
       {showMemeOverlay && <MemeOverlay meme={memes[memeIndex!]} />}
       <div style={S.page}>
         <style>{kf}</style>
+        <SummaryButton />
         <div style={S.container}>
           <div style={S.greeting}>Hoi <b>{name}</b> 👋</div>
           <div style={S.futureWrap}>

@@ -3,6 +3,7 @@ import { supabase } from './lib/supabase';
 import { subjects } from './questions';
 import { memes } from './memes';
 import { bondingQuestions } from './bonding';
+import { SummaryButton } from './SummaryButton';
 
 export function Host() {
   const HOST_NAME = 'Yahya';
@@ -94,6 +95,7 @@ export function Host() {
   return (
     <div style={S.page}>
       <style>{kf}</style>
+      <SummaryButton />
       {memeIndex !== null && memes[memeIndex] && (
         <MemeOverlay meme={memes[memeIndex]} onClose={closeMeme} isHost />
       )}
