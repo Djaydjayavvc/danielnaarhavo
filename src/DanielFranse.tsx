@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { supabase } from "./lib/supabase";
 
 // ─── DATA ───────────────────────────────────────────────────────────
 const VOCAB: Record<string, [string, string][]> = {
@@ -184,6 +185,24 @@ function pickChoices(correct: string, allOptions: string[], count = 4): string[]
   const others = allOptions.filter((o) => o !== correct);
   const picked = shuffle(others).slice(0, count - 1);
   return shuffle([correct, ...picked]);
+}
+
+async function saveAttempt(
+  category: string,
+  question: string,
+  givenAnswer: string | null,
+  correctAnswer: string,
+  isCorrect: boolean
+) {
+  const { error } = await supabase.from("quiz_attempts").insert({
+    subject: "frans",
+    category,
+    question,
+    given_answer: givenAnswer,
+    correct_answer: correctAnswer,
+    is_correct: isCorrect,
+  });
+  if (error) console.error("saveAttempt failed:", error);
 }
 
 // ─── CLOCK FACE COMPONENT ──────────────────────────────────────────
@@ -640,6 +659,7 @@ interface VocabQuestion {
   prompt: string;
   answer: string;
   choices: string[];
+  section: string;
 }
 
 function VocabQuiz() {
@@ -652,12 +672,12 @@ function VocabQuiz() {
   const [started, setStarted] = useState(false);
 
   const start = () => {
-    const pool = sections.flatMap((s) => VOCAB[s]);
-    const allAnswers = pool.map((p) => (direction === "fr" ? p[1] : p[0]));
-    const qs = shuffle(pool).map((pair) => {
+    const pool = sections.flatMap((s) => VOCAB[s].map((pair) => ({ pair, section: s })));
+    const allAnswers = pool.map(({ pair }) => (direction === "fr" ? pair[1] : pair[0]));
+    const qs: VocabQuestion[] = shuffle(pool).map(({ pair, section }) => {
       const prompt = direction === "fr" ? pair[0] : pair[1];
       const answer = direction === "fr" ? pair[1] : pair[0];
-      return { prompt, answer, choices: pickChoices(answer, allAnswers) };
+      return { prompt, answer, choices: pickChoices(answer, allAnswers), section };
     });
     setQuestions(qs);
     setQi(0);
@@ -714,8 +734,10 @@ function VocabQuiz() {
   const handleChoice = (c: string) => {
     if (selected) return;
     setSelected(c);
-    if (c === cur.answer) setScore((s) => ({ ...s, correct: s.correct + 1 }));
+    const isCorrect = c === cur.answer;
+    if (isCorrect) setScore((s) => ({ ...s, correct: s.correct + 1 }));
     else setScore((s) => ({ ...s, wrong: s.wrong + 1 }));
+    saveAttempt(`vocab_${cur.section}`, cur.prompt, c, cur.answer, isCorrect);
   };
 
   return (
@@ -845,10 +867,16 @@ function VerbQuiz() {
   }
 
   const cur = questions[qi];
+  let prompt = "";
+  if (cur.type === "conjugate") prompt = `${cur.label}: ${cur.pronoun} ...?`;
+  else if (cur.type === "er") prompt = `Werkwoord op -er: ${cur.pronoun} → welke uitgang?`;
+  else prompt = "Passé composé van 'faire' (ik heb gedaan)?";
+
   const check = () => {
     const ok = input.trim().toLowerCase() === cur.answer.toLowerCase();
     setFeedback(ok ? "correct" : "wrong");
     setScore((s) => ok ? { ...s, correct: s.correct + 1 } : { ...s, wrong: s.wrong + 1 });
+    saveAttempt("werkwoorden", prompt, input.trim(), cur.answer, ok);
   };
 
   const next = () => {
@@ -856,11 +884,6 @@ function VerbQuiz() {
     setInput("");
     setFeedback(null);
   };
-
-  let prompt = "";
-  if (cur.type === "conjugate") prompt = `${cur.label}: ${cur.pronoun} ...?`;
-  else if (cur.type === "er") prompt = `Werkwoord op -er: ${cur.pronoun} → welke uitgang?`;
-  else prompt = "Passé composé van 'faire' (ik heb gedaan)?";
 
   return (
     <>
@@ -934,8 +957,10 @@ function ClockQuiz() {
   const handleChoice = (c: string) => {
     if (selected) return;
     setSelected(c);
-    if (c === cur.answer) setScore((s) => ({ ...s, correct: s.correct + 1 }));
+    const isCorrect = c === cur.answer;
+    if (isCorrect) setScore((s) => ({ ...s, correct: s.correct + 1 }));
     else setScore((s) => ({ ...s, wrong: s.wrong + 1 }));
+    saveAttempt("kloktijden", `${cur.hour}:${String(cur.min).padStart(2, "0")}`, c, cur.answer, isCorrect);
   };
 
   return (
@@ -1009,8 +1034,10 @@ function PhraseQuiz() {
   const handleChoice = (c: string) => {
     if (selected) return;
     setSelected(c);
-    if (c === cur.answer) setScore((s) => ({ ...s, correct: s.correct + 1 }));
+    const isCorrect = c === cur.answer;
+    if (isCorrect) setScore((s) => ({ ...s, correct: s.correct + 1 }));
     else setScore((s) => ({ ...s, wrong: s.wrong + 1 }));
+    saveAttempt("zinnen", cur.prompt, c, cur.answer, isCorrect);
   };
 
   return (
@@ -1073,6 +1100,7 @@ function WordOrderQuiz() {
     const ok = clean(input) === clean(cur.a);
     setFeedback(ok ? "correct" : "wrong");
     setScore((s) => ok ? { ...s, correct: s.correct + 1 } : { ...s, wrong: s.wrong + 1 });
+    saveAttempt("woordvolgorde", cur.q, input.trim(), cur.a, ok);
   };
   const next = () => { setQi(qi + 1); setInput(""); setFeedback(null); setShowHint(false); };
 

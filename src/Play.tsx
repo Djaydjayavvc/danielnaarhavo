@@ -100,6 +100,14 @@ export function Play() {
       subject_id: subjectId, question_index: currentQ, player_name: name, answer,
     });
     if (error) console.error('Insert failed:', error);
+    await supabase.from('quiz_attempts').insert({
+      subject: 'bio',
+      category: subjectId,
+      question: q.prompt,
+      given_answer: answer,
+      correct_answer: q.answer,
+      is_correct: checkCorrect(answer, q.answer, isMC),
+    });
     setMySubmittedAnswer(answer);
     setSubmitted(true);
   };
