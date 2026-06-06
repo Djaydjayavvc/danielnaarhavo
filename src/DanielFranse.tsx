@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 
 // ─── DATA ───────────────────────────────────────────────────────────
-const VOCAB = {
+const VOCAB: Record<string, [string, string][]> = {
   A: [
     ["jouer de la batterie", "drummen"],
     ["jouer de la guitare", "gitaar spelen"],
@@ -76,7 +76,7 @@ const VOCAB = {
   ],
 };
 
-const PHRASES = [
+const PHRASES: [string, string][] = [
   ["Tu joues d'un instrument?", "Speel jij een muziekinstrument?"],
   ["Oui, je joue de la guitare.", "Ja, ik speel gitaar."],
   ["Tu fais du sport?", "Sport jij?"],
@@ -93,7 +93,14 @@ const PHRASES = [
   ["À tout à l'heure!", "Tot straks!"],
 ];
 
-const VERBS = {
+interface VerbData {
+  label: string;
+  present: Record<string, string>;
+  passeCompose?: string;
+  note?: string;
+}
+
+const VERBS: Record<string, VerbData> = {
   faire: {
     label: "Faire (doen/maken)",
     present: { je: "fais", tu: "fais", "il/elle/on": "fait", nous: "faisons", vous: "faites", "ils/elles": "font" },
@@ -114,7 +121,7 @@ const VERBS = {
   },
 };
 
-const ER_ENDINGS = {
+const ER_ENDINGS: Record<string, string> = {
   je: "-e",
   tu: "-es",
   "il/elle/on": "-e",
@@ -164,7 +171,7 @@ const WORD_ORDER_QS = [
 ];
 
 // ─── HELPERS ────────────────────────────────────────────────────────
-function shuffle(arr) {
+function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -173,14 +180,19 @@ function shuffle(arr) {
   return a;
 }
 
-function pickChoices(correct, allOptions, count = 4) {
+function pickChoices(correct: string, allOptions: string[], count = 4): string[] {
   const others = allOptions.filter((o) => o !== correct);
   const picked = shuffle(others).slice(0, count - 1);
   return shuffle([correct, ...picked]);
 }
 
 // ─── CLOCK FACE COMPONENT ──────────────────────────────────────────
-function ClockFace({ hour, minute }) {
+interface ClockFaceProps {
+  hour: number;
+  minute: number;
+}
+
+function ClockFace({ hour, minute }: ClockFaceProps) {
   const h = ((hour % 12) + minute / 60) * 30;
   const m = minute * 6;
   return (
@@ -585,7 +597,7 @@ const MODES = [
 
 // ─── MAIN COMPONENT ────────────────────────────────────────────────
 export default function DanielFranse() {
-  const [mode, setMode] = useState(null);
+  const [mode, setMode] = useState<string | null>(null);
 
   return (
     <>
@@ -624,12 +636,18 @@ export default function DanielFranse() {
 }
 
 // ─── VOCAB QUIZ ─────────────────────────────────────────────────────
+interface VocabQuestion {
+  prompt: string;
+  answer: string;
+  choices: string[];
+}
+
 function VocabQuiz() {
-  const [sections, setSections] = useState(["A", "B", "E", "F"]);
+  const [sections, setSections] = useState<string[]>(["A", "B", "E", "F"]);
   const [direction, setDirection] = useState("fr"); // fr→nl or nl→fr
-  const [questions, setQuestions] = useState([]);
+  const [questions, setQuestions] = useState<VocabQuestion[]>([]);
   const [qi, setQi] = useState(0);
-  const [selected, setSelected] = useState(null);
+  const [selected, setSelected] = useState<string | null>(null);
   const [score, setScore] = useState({ correct: 0, wrong: 0 });
   const [started, setStarted] = useState(false);
 
@@ -648,7 +666,7 @@ function VocabQuiz() {
     setStarted(true);
   };
 
-  const toggleSection = (s) => {
+  const toggleSection = (s: string) => {
     setSections((prev) => (prev.includes(s) ? (prev.length > 1 ? prev.filter((x) => x !== s) : prev) : [...prev, s]));
   };
 
@@ -693,7 +711,7 @@ function VocabQuiz() {
     );
   }
 
-  const handleChoice = (c) => {
+  const handleChoice = (c: string) => {
     if (selected) return;
     setSelected(c);
     if (c === cur.answer) setScore((s) => ({ ...s, correct: s.correct + 1 }));
@@ -728,23 +746,28 @@ function VocabQuiz() {
 }
 
 // ─── VERB QUIZ ──────────────────────────────────────────────────────
+type VerbQuestion =
+  | { type: "conjugate"; verb: string; label: string; pronoun: string; answer: string }
+  | { type: "er"; pronoun: string; answer: string }
+  | { type: "passe"; answer: string };
+
 function VerbQuiz() {
   const pronouns = ["je", "tu", "il/elle/on", "nous", "vous", "ils/elles"];
   const verbKeys = Object.keys(VERBS);
-  const [questions, setQuestions] = useState([]);
+  const [questions, setQuestions] = useState<VerbQuestion[]>([]);
   const [qi, setQi] = useState(0);
   const [input, setInput] = useState("");
-  const [feedback, setFeedback] = useState(null);
+  const [feedback, setFeedback] = useState<"correct" | "wrong" | null>(null);
   const [score, setScore] = useState({ correct: 0, wrong: 0 });
   const [started, setStarted] = useState(false);
-  const inputRef = useRef(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (started && inputRef.current) inputRef.current.focus();
   }, [qi, started]);
 
   const start = () => {
-    const qs = [];
+    const qs: VerbQuestion[] = [];
     // irregular verbs
     verbKeys.forEach((vk) => {
       const v = VERBS[vk];
@@ -869,10 +892,17 @@ function VerbQuiz() {
 }
 
 // ─── CLOCK QUIZ ─────────────────────────────────────────────────────
+interface ClockQuestion {
+  hour: number;
+  min: number;
+  answer: string;
+  choices: string[];
+}
+
 function ClockQuiz() {
-  const [questions, setQuestions] = useState([]);
+  const [questions, setQuestions] = useState<ClockQuestion[]>([]);
   const [qi, setQi] = useState(0);
-  const [selected, setSelected] = useState(null);
+  const [selected, setSelected] = useState<string | null>(null);
   const [score, setScore] = useState({ correct: 0, wrong: 0 });
 
   useEffect(() => {
@@ -901,7 +931,7 @@ function ClockQuiz() {
   }
 
   const cur = questions[qi];
-  const handleChoice = (c) => {
+  const handleChoice = (c: string) => {
     if (selected) return;
     setSelected(c);
     if (c === cur.answer) setScore((s) => ({ ...s, correct: s.correct + 1 }));
@@ -937,10 +967,16 @@ function ClockQuiz() {
 }
 
 // ─── PHRASE QUIZ ────────────────────────────────────────────────────
+interface PhraseQuestion {
+  prompt: string;
+  answer: string;
+  choices: string[];
+}
+
 function PhraseQuiz() {
-  const [questions, setQuestions] = useState([]);
+  const [questions, setQuestions] = useState<PhraseQuestion[]>([]);
   const [qi, setQi] = useState(0);
-  const [selected, setSelected] = useState(null);
+  const [selected, setSelected] = useState<string | null>(null);
   const [score, setScore] = useState({ correct: 0, wrong: 0 });
 
   useEffect(() => {
@@ -970,7 +1006,7 @@ function PhraseQuiz() {
   }
 
   const cur = questions[qi];
-  const handleChoice = (c) => {
+  const handleChoice = (c: string) => {
     if (selected) return;
     setSelected(c);
     if (c === cur.answer) setScore((s) => ({ ...s, correct: s.correct + 1 }));
@@ -1008,10 +1044,10 @@ function PhraseQuiz() {
 function WordOrderQuiz() {
   const [qi, setQi] = useState(0);
   const [input, setInput] = useState("");
-  const [feedback, setFeedback] = useState(null);
+  const [feedback, setFeedback] = useState<"correct" | "wrong" | null>(null);
   const [showHint, setShowHint] = useState(false);
   const [score, setScore] = useState({ correct: 0, wrong: 0 });
-  const inputRef = useRef(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { if (inputRef.current) inputRef.current.focus(); }, [qi]);
 
@@ -1033,7 +1069,7 @@ function WordOrderQuiz() {
 
   const cur = qs[qi];
   const check = () => {
-    const clean = (s) => s.toLowerCase().replace(/[.,!?]/g, "").replace(/\s+/g, " ").trim();
+    const clean = (s: string) => s.toLowerCase().replace(/[.,!?]/g, "").replace(/\s+/g, " ").trim();
     const ok = clean(input) === clean(cur.a);
     setFeedback(ok ? "correct" : "wrong");
     setScore((s) => ok ? { ...s, correct: s.correct + 1 } : { ...s, wrong: s.wrong + 1 });
@@ -1074,11 +1110,11 @@ function WordOrderQuiz() {
 // ─── STUDY OVERVIEW ─────────────────────────────────────────────────
 function StudyOverview() {
   const [section, setSection] = useState("A");
-  const [revealed, setRevealed] = useState({});
+  const [revealed, setRevealed] = useState<Record<number, boolean>>({});
 
-  const toggle = (i) => setRevealed((r) => ({ ...r, [i]: !r[i] }));
+  const toggle = (i: number) => setRevealed((r) => ({ ...r, [i]: !r[i] }));
 
-  const allSections = { ...VOCAB, Zinnen: PHRASES };
+  const allSections: Record<string, [string, string][]> = { ...VOCAB, Zinnen: PHRASES };
 
   return (
     <>
