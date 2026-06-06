@@ -1,0 +1,1100 @@
+import { useState, useEffect, useCallback, useRef } from "react";
+
+// ─── DATA ───────────────────────────────────────────────────────────
+const VOCAB = {
+  A: [
+    ["jouer de la batterie", "drummen"],
+    ["jouer de la guitare", "gitaar spelen"],
+    ["jouer du piano", "piano spelen"],
+    ["jouer de la flute", "fluit spelen"],
+    ["la musique", "de muziek"],
+    ["tu peux", "jij kunt"],
+    ["choisir", "kiezen"],
+    ["commencer", "beginnen"],
+    ["la fois", "de keer"],
+    ["le jour", "de dag"],
+    ["la semaine", "de week"],
+    ["le mois", "de maand"],
+    ["pendant", "tijdens"],
+    ["bientôt", "gauw"],
+    ["encore", "nog"],
+    ["depuis", "sinds"],
+  ],
+  B: [
+    ["faire de la natation", "zwemmen"],
+    ["faire du basket", "basketballen"],
+    ["faire du tennis", "tennissen"],
+    ["faire de la danse", "dansen"],
+    ["faire du foot", "voetballen"],
+    ["faire du vélo", "wielrennen"],
+    ["gagner", "winnen"],
+    ["rester", "blijven"],
+    ["l'équipe", "het team"],
+    ["le match", "de wedstrijd"],
+    ["la compétition", "de competitie"],
+    ["l'entraînement", "de training"],
+    ["le rêve", "de droom"],
+    ["parce que", "omdat"],
+    ["jusqu'à", "tot"],
+    ["prochain(e)", "volgende"],
+  ],
+  E: [
+    ["venir", "komen"],
+    ["penser", "denken"],
+    ["attendre", "wachten"],
+    ["la solution", "de oplossing"],
+    ["la porte", "de deur"],
+    ["sans", "zonder"],
+    ["dommage", "jammer"],
+    ["dangereux", "gevaarlijk"],
+    ["possible", "mogelijk"],
+    ["important(e)", "belangrijk"],
+    ["fou, folle", "gek"],
+    ["bête", "stom"],
+    ["donc", "dus"],
+    ["selon", "volgens"],
+    ["à la piscine", "naar het zwembad"],
+    ["à la plage", "naar het strand"],
+  ],
+  F: [
+    ["faire du théâtre", "toneelspelen"],
+    ["l'expérience", "de ervaring"],
+    ["le rendez-vous", "de afspraak"],
+    ["la prison", "de gevangenis"],
+    ["permis", "toegestaan"],
+    ["montrer", "laten zien"],
+    ["la chance", "de kans / het geluk"],
+    ["chaque", "iedere / elke"],
+    ["rêver", "dromen"],
+    ["participer", "deelnemen"],
+    ["demain", "morgen"],
+    ["maintenant", "nu"],
+    ["hier", "gisteren"],
+    ["aujourd'hui", "vandaag"],
+    ["ce matin", "vanmorgen"],
+    ["cet après-midi", "vanmiddag"],
+  ],
+};
+
+const PHRASES = [
+  ["Tu joues d'un instrument?", "Speel jij een muziekinstrument?"],
+  ["Oui, je joue de la guitare.", "Ja, ik speel gitaar."],
+  ["Tu fais du sport?", "Sport jij?"],
+  ["Oui, je fais de la natation.", "Ja, ik zwem."],
+  ["Je fais du foot deux fois par semaine.", "Ik voetbal twee keer per week."],
+  ["Tu as un match quand?", "Wanneer heb je een wedstrijd?"],
+  ["J'ai un match le samedi.", "Ik heb zaterdag een wedstrijd."],
+  ["On va au cinéma?", "Gaan wij naar de bioscoop?"],
+  ["Oui, d'accord.", "Ja, oké."],
+  ["À quelle heure?", "Hoe laat?"],
+  ["À trois heures.", "Om drie uur."],
+  ["Qu'est-ce qu'on va faire ce weekend?", "Wat gaan wij dit weekend doen?"],
+  ["Je ne sais pas.", "Ik weet het niet."],
+  ["À tout à l'heure!", "Tot straks!"],
+];
+
+const VERBS = {
+  faire: {
+    label: "Faire (doen/maken)",
+    present: { je: "fais", tu: "fais", "il/elle/on": "fait", nous: "faisons", vous: "faites", "ils/elles": "font" },
+    passeCompose: "j'ai fait",
+    note: "Passé composé = avoir + fait",
+  },
+  être: {
+    label: "Être (zijn)",
+    present: { je: "suis", tu: "es", "il/elle/on": "est", nous: "sommes", vous: "êtes", "ils/elles": "sont" },
+  },
+  avoir: {
+    label: "Avoir (hebben)",
+    present: { je: "ai", tu: "as", "il/elle/on": "a", nous: "avons", vous: "avez", "ils/elles": "ont" },
+  },
+  aller: {
+    label: "Aller (gaan)",
+    present: { je: "vais", tu: "vas", "il/elle/on": "va", nous: "allons", vous: "allez", "ils/elles": "vont" },
+  },
+};
+
+const ER_ENDINGS = {
+  je: "-e",
+  tu: "-es",
+  "il/elle/on": "-e",
+  nous: "-ons",
+  vous: "-ez",
+  "ils/elles": "-ent",
+};
+
+const CLOCK_TIMES = [
+  { hour: 1, min: 0, answer: "une heure" },
+  { hour: 2, min: 15, answer: "deux heures et quart" },
+  { hour: 3, min: 30, answer: "trois heures et demie" },
+  { hour: 4, min: 45, answer: "cinq heures moins le quart" },
+  { hour: 5, min: 10, answer: "cinq heures dix" },
+  { hour: 6, min: 20, answer: "six heures vingt" },
+  { hour: 7, min: 25, answer: "sept heures vingt-cinq" },
+  { hour: 8, min: 35, answer: "neuf heures moins vingt-cinq" },
+  { hour: 9, min: 40, answer: "dix heures moins vingt" },
+  { hour: 10, min: 50, answer: "onze heures moins dix" },
+  { hour: 11, min: 55, answer: "midi moins cinq" },
+  { hour: 12, min: 0, answer: "midi" },
+  { hour: 12, min: 5, answer: "midi cinq" },
+  { hour: 0, min: 0, answer: "minuit" },
+];
+
+const WORD_ORDER_QS = [
+  {
+    q: "Hoe zeg je: 'Ik ga de wedstrijd winnen' in het Frans?",
+    a: "Je vais gagner le match.",
+    hint: "In het Frans staan werkwoorden altijd bij elkaar.",
+  },
+  {
+    q: "Hoe zeg je: 'Morgen ga ik voetballen' in het Frans?",
+    a: "Demain, je vais faire du foot.",
+    hint: "De bepaling van tijd staat aan het begin of einde van de zin.",
+  },
+  {
+    q: "Hoe zeg je: 'Ik heb zaterdag een wedstrijd' in het Frans?",
+    a: "J'ai un match le samedi.",
+    hint: "De bepaling van tijd staat aan het begin of einde.",
+  },
+  {
+    q: "Hoe zeg je: 'Hij heeft een tekening gemaakt' in het Frans?",
+    a: "Il a fait un dessin.",
+    hint: "Passé composé van faire = avoir + fait.",
+  },
+];
+
+// ─── HELPERS ────────────────────────────────────────────────────────
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function pickChoices(correct, allOptions, count = 4) {
+  const others = allOptions.filter((o) => o !== correct);
+  const picked = shuffle(others).slice(0, count - 1);
+  return shuffle([correct, ...picked]);
+}
+
+// ─── CLOCK FACE COMPONENT ──────────────────────────────────────────
+function ClockFace({ hour, minute }) {
+  const h = ((hour % 12) + minute / 60) * 30;
+  const m = minute * 6;
+  return (
+    <svg viewBox="0 0 200 200" style={{ width: 160, height: 160 }}>
+      <circle cx="100" cy="100" r="94" fill="#fefcf3" stroke="#1a2744" strokeWidth="3" />
+      {[...Array(12)].map((_, i) => {
+        const angle = ((i + 1) * 30 * Math.PI) / 180;
+        const x = 100 + 76 * Math.sin(angle);
+        const y = 100 - 76 * Math.cos(angle);
+        return (
+          <text key={i} x={x} y={y} textAnchor="middle" dominantBaseline="central" style={{ fontSize: 14, fontWeight: 600, fill: "#1a2744", fontFamily: "'DM Sans'" }}>
+            {i + 1}
+          </text>
+        );
+      })}
+      <line x1="100" y1="100" x2={100 + 48 * Math.sin((h * Math.PI) / 180)} y2={100 - 48 * Math.cos((h * Math.PI) / 180)} stroke="#1a2744" strokeWidth="4.5" strokeLinecap="round" />
+      <line x1="100" y1="100" x2={100 + 66 * Math.sin((m * Math.PI) / 180)} y2={100 - 66 * Math.cos((m * Math.PI) / 180)} stroke="#e8553d" strokeWidth="2.5" strokeLinecap="round" />
+      <circle cx="100" cy="100" r="4" fill="#1a2744" />
+    </svg>
+  );
+}
+
+// ─── STYLES ─────────────────────────────────────────────────────────
+const COLORS = {
+  bg: "#0f1729",
+  card: "#182340",
+  cardHover: "#1e2d52",
+  accent: "#3b82f6",
+  accentGlow: "rgba(59,130,246,.25)",
+  green: "#22c55e",
+  greenGlow: "rgba(34,197,94,.2)",
+  red: "#ef4444",
+  redGlow: "rgba(239,68,68,.2)",
+  orange: "#f59e0b",
+  text: "#e2e8f0",
+  textDim: "#94a3b8",
+  textBright: "#f8fafc",
+  border: "#2a3a5c",
+};
+
+const css = `
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&family=Outfit:wght@600;700;800&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: ${COLORS.bg};
+    color: ${COLORS.text};
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .app {
+    min-height: 100vh;
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 20px 16px 40px;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 28px;
+    padding-top: 12px;
+  }
+  .header h1 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #60a5fa, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+  }
+  .header p {
+    color: ${COLORS.textDim};
+    font-size: 14px;
+    margin-top: 4px;
+  }
+  .header .exam-badge {
+    display: inline-block;
+    margin-top: 8px;
+    background: rgba(245,158,11,.15);
+    color: ${COLORS.orange};
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1px solid rgba(245,158,11,.25);
+  }
+
+  .menu-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .menu-btn {
+    background: ${COLORS.card};
+    border: 1px solid ${COLORS.border};
+    border-radius: 14px;
+    padding: 16px 12px;
+    cursor: pointer;
+    transition: all .2s;
+    text-align: center;
+  }
+  .menu-btn:hover { background: ${COLORS.cardHover}; border-color: ${COLORS.accent}; }
+  .menu-btn .icon { font-size: 26px; margin-bottom: 6px; }
+  .menu-btn .label {
+    font-size: 13px;
+    font-weight: 600;
+    color: ${COLORS.textBright};
+    line-height: 1.3;
+  }
+  .menu-btn .sub {
+    font-size: 11px;
+    color: ${COLORS.textDim};
+    margin-top: 2px;
+  }
+  .menu-btn.full { grid-column: 1 / -1; }
+
+  .back-btn {
+    background: none;
+    border: none;
+    color: ${COLORS.textDim};
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 8px 0;
+    margin-bottom: 12px;
+    font-family: 'DM Sans';
+  }
+  .back-btn:hover { color: ${COLORS.textBright}; }
+
+  .progress-bar {
+    width: 100%;
+    height: 6px;
+    background: rgba(255,255,255,.06);
+    border-radius: 3px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, ${COLORS.accent}, #a78bfa);
+    border-radius: 3px;
+    transition: width .4s ease;
+  }
+
+  .score-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    font-size: 13px;
+    color: ${COLORS.textDim};
+    font-weight: 500;
+  }
+  .score-row .correct { color: ${COLORS.green}; }
+  .score-row .wrong { color: ${COLORS.red}; }
+
+  .question-card {
+    background: ${COLORS.card};
+    border: 1px solid ${COLORS.border};
+    border-radius: 16px;
+    padding: 24px 20px;
+    margin-bottom: 14px;
+    text-align: center;
+  }
+  .question-card .direction {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: ${COLORS.textDim};
+    margin-bottom: 10px;
+  }
+  .question-card .word {
+    font-family: 'Outfit', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: ${COLORS.textBright};
+    line-height: 1.3;
+  }
+
+  .choices {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .choice-btn {
+    background: ${COLORS.card};
+    border: 1.5px solid ${COLORS.border};
+    border-radius: 12px;
+    padding: 14px 16px;
+    cursor: pointer;
+    font-size: 15px;
+    font-family: 'DM Sans';
+    color: ${COLORS.text};
+    text-align: left;
+    transition: all .15s;
+    font-weight: 500;
+  }
+  .choice-btn:hover:not(.locked) {
+    background: ${COLORS.cardHover};
+    border-color: ${COLORS.accent};
+  }
+  .choice-btn.correct {
+    background: ${COLORS.greenGlow};
+    border-color: ${COLORS.green};
+    color: ${COLORS.green};
+  }
+  .choice-btn.wrong {
+    background: ${COLORS.redGlow};
+    border-color: ${COLORS.red};
+    color: ${COLORS.red};
+  }
+  .choice-btn.locked { cursor: default; opacity: .6; }
+  .choice-btn.locked.correct { opacity: 1; }
+
+  .conjugation-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .conj-cell {
+    background: rgba(255,255,255,.04);
+    border-radius: 10px;
+    padding: 10px;
+    text-align: center;
+  }
+  .conj-cell .pronoun {
+    font-size: 11px;
+    color: ${COLORS.textDim};
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+  .conj-cell .form {
+    font-size: 16px;
+    font-weight: 600;
+    color: ${COLORS.textBright};
+    margin-top: 2px;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .text-input {
+    flex: 1;
+    background: rgba(255,255,255,.06);
+    border: 1.5px solid ${COLORS.border};
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: ${COLORS.textBright};
+    font-size: 15px;
+    font-family: 'DM Sans';
+    outline: none;
+    transition: border-color .2s;
+  }
+  .text-input:focus { border-color: ${COLORS.accent}; }
+  .submit-btn {
+    background: ${COLORS.accent};
+    border: none;
+    border-radius: 10px;
+    padding: 12px 18px;
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: 'DM Sans';
+    white-space: nowrap;
+  }
+  .submit-btn:disabled { opacity: .4; cursor: default; }
+
+  .feedback {
+    margin-top: 12px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.5;
+  }
+  .feedback.correct { background: ${COLORS.greenGlow}; color: ${COLORS.green}; border: 1px solid rgba(34,197,94,.2); }
+  .feedback.wrong { background: ${COLORS.redGlow}; color: ${COLORS.red}; border: 1px solid rgba(239,68,68,.2); }
+  .feedback .answer-line { color: ${COLORS.textBright}; margin-top: 4px; font-weight: 600; }
+
+  .next-btn {
+    width: 100%;
+    margin-top: 14px;
+    background: linear-gradient(135deg, ${COLORS.accent}, #7c3aed);
+    border: none;
+    border-radius: 12px;
+    padding: 14px;
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'DM Sans';
+    transition: opacity .2s;
+  }
+  .next-btn:hover { opacity: .9; }
+
+  .result-card {
+    background: ${COLORS.card};
+    border: 1px solid ${COLORS.border};
+    border-radius: 16px;
+    padding: 32px 24px;
+    text-align: center;
+  }
+  .result-card .emoji { font-size: 48px; margin-bottom: 12px; }
+  .result-card h2 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: ${COLORS.textBright};
+  }
+  .result-card .score-text {
+    font-size: 36px;
+    font-weight: 800;
+    font-family: 'Outfit';
+    margin: 12px 0 4px;
+  }
+  .result-card .score-text.great { color: ${COLORS.green}; }
+  .result-card .score-text.ok { color: ${COLORS.orange}; }
+  .result-card .score-text.low { color: ${COLORS.red}; }
+  .result-card .detail { font-size: 14px; color: ${COLORS.textDim}; }
+
+  .clock-container { display: flex; justify-content: center; margin: 16px 0; }
+
+  .section-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .pill {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1.5px solid ${COLORS.border};
+    background: ${COLORS.card};
+    color: ${COLORS.textDim};
+    font-family: 'DM Sans';
+    transition: all .2s;
+  }
+  .pill.active {
+    background: ${COLORS.accentGlow};
+    border-color: ${COLORS.accent};
+    color: ${COLORS.accent};
+  }
+
+  .hint-btn {
+    background: none;
+    border: none;
+    color: ${COLORS.orange};
+    font-size: 13px;
+    cursor: pointer;
+    margin-top: 8px;
+    font-family: 'DM Sans';
+    font-weight: 500;
+  }
+  .hint-text {
+    font-size: 13px;
+    color: ${COLORS.orange};
+    margin-top: 6px;
+    font-style: italic;
+  }
+
+  .study-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .study-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: ${COLORS.card};
+    border: 1px solid ${COLORS.border};
+    border-radius: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .study-row:hover { background: ${COLORS.cardHover}; }
+  .study-row .fr { font-weight: 600; color: ${COLORS.textBright}; font-size: 14px; }
+  .study-row .nl { color: ${COLORS.textDim}; font-size: 13px; }
+  .study-row .nl.show { color: ${COLORS.green}; }
+`;
+
+// ─── MODES ──────────────────────────────────────────────────────────
+const MODES = [
+  { id: "vocab", icon: "📝", label: "Woordjes", sub: "A B E F" },
+  { id: "verbs", icon: "🔤", label: "Werkwoorden", sub: "Faire · Être · Avoir · Aller" },
+  { id: "clock", icon: "🕐", label: "Kloktijden", sub: "Hoe laat is het?" },
+  { id: "phrases", icon: "💬", label: "Zinnen", sub: "Phrases-clés" },
+  { id: "wordorder", icon: "🔀", label: "Woordvolgorde", sub: "Zinsbouw" },
+  { id: "study", icon: "📖", label: "Overzicht", sub: "Alles bekijken" },
+];
+
+// ─── MAIN COMPONENT ────────────────────────────────────────────────
+export default function DanielFranse() {
+  const [mode, setMode] = useState(null);
+
+  return (
+    <>
+      <style>{css}</style>
+      <div className="app">
+        <div className="header">
+          <h1>🇫🇷 Chapitre 7</h1>
+          <p>Grandes Lignes · Proefwerk</p>
+          <div className="exam-badge">📅 Toets: 10 juni</div>
+        </div>
+
+        {!mode ? (
+          <div className="menu-grid">
+            {MODES.map((m) => (
+              <div key={m.id} className={`menu-btn${m.id === "study" ? " full" : ""}`} onClick={() => setMode(m.id)}>
+                <div className="icon">{m.icon}</div>
+                <div className="label">{m.label}</div>
+                <div className="sub">{m.sub}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <>
+            <button className="back-btn" onClick={() => setMode(null)}>← Terug naar menu</button>
+            {mode === "vocab" && <VocabQuiz />}
+            {mode === "verbs" && <VerbQuiz />}
+            {mode === "clock" && <ClockQuiz />}
+            {mode === "phrases" && <PhraseQuiz />}
+            {mode === "wordorder" && <WordOrderQuiz />}
+            {mode === "study" && <StudyOverview />}
+          </>
+        )}
+      </div>
+    </>
+  );
+}
+
+// ─── VOCAB QUIZ ─────────────────────────────────────────────────────
+function VocabQuiz() {
+  const [sections, setSections] = useState(["A", "B", "E", "F"]);
+  const [direction, setDirection] = useState("fr"); // fr→nl or nl→fr
+  const [questions, setQuestions] = useState([]);
+  const [qi, setQi] = useState(0);
+  const [selected, setSelected] = useState(null);
+  const [score, setScore] = useState({ correct: 0, wrong: 0 });
+  const [started, setStarted] = useState(false);
+
+  const start = () => {
+    const pool = sections.flatMap((s) => VOCAB[s]);
+    const allAnswers = pool.map((p) => (direction === "fr" ? p[1] : p[0]));
+    const qs = shuffle(pool).map((pair) => {
+      const prompt = direction === "fr" ? pair[0] : pair[1];
+      const answer = direction === "fr" ? pair[1] : pair[0];
+      return { prompt, answer, choices: pickChoices(answer, allAnswers) };
+    });
+    setQuestions(qs);
+    setQi(0);
+    setSelected(null);
+    setScore({ correct: 0, wrong: 0 });
+    setStarted(true);
+  };
+
+  const toggleSection = (s) => {
+    setSections((prev) => (prev.includes(s) ? (prev.length > 1 ? prev.filter((x) => x !== s) : prev) : [...prev, s]));
+  };
+
+  if (!started) {
+    return (
+      <>
+        <div className="question-card">
+          <div className="direction">Kies secties</div>
+          <div className="section-pills" style={{ justifyContent: "center", marginTop: 8 }}>
+            {["A", "B", "E", "F"].map((s) => (
+              <button key={s} className={`pill${sections.includes(s) ? " active" : ""}`} onClick={() => toggleSection(s)}>
+                {s}
+              </button>
+            ))}
+          </div>
+          <div style={{ marginTop: 16 }}>
+            <div className="direction">Richting</div>
+            <div className="section-pills" style={{ justifyContent: "center", marginTop: 8 }}>
+              <button className={`pill${direction === "fr" ? " active" : ""}`} onClick={() => setDirection("fr")}>Frans → NL</button>
+              <button className={`pill${direction === "nl" ? " active" : ""}`} onClick={() => setDirection("nl")}>NL → Frans</button>
+            </div>
+          </div>
+        </div>
+        <button className="next-btn" onClick={start}>Start quiz ({sections.flatMap((s) => VOCAB[s]).length} woorden)</button>
+      </>
+    );
+  }
+
+  const cur = questions[qi];
+  const done = qi >= questions.length;
+
+  if (done) {
+    const pct = Math.round((score.correct / questions.length) * 100);
+    return (
+      <div className="result-card">
+        <div className="emoji">{pct >= 80 ? "🎉" : pct >= 55 ? "💪" : "📚"}</div>
+        <h2>{pct >= 80 ? "Goed bezig!" : pct >= 55 ? "Bijna!" : "Nog even oefenen"}</h2>
+        <div className={`score-text ${pct >= 80 ? "great" : pct >= 55 ? "ok" : "low"}`}>{pct}%</div>
+        <div className="detail">{score.correct} / {questions.length} goed</div>
+        <button className="next-btn" onClick={() => setStarted(false)} style={{ marginTop: 20 }}>Opnieuw</button>
+      </div>
+    );
+  }
+
+  const handleChoice = (c) => {
+    if (selected) return;
+    setSelected(c);
+    if (c === cur.answer) setScore((s) => ({ ...s, correct: s.correct + 1 }));
+    else setScore((s) => ({ ...s, wrong: s.wrong + 1 }));
+  };
+
+  return (
+    <>
+      <div className="progress-bar"><div className="progress-fill" style={{ width: `${(qi / questions.length) * 100}%` }} /></div>
+      <div className="score-row">
+        <span>Vraag {qi + 1} / {questions.length}</span>
+        <span><span className="correct">✓ {score.correct}</span> · <span className="wrong">✗ {score.wrong}</span></span>
+      </div>
+      <div className="question-card">
+        <div className="direction">{direction === "fr" ? "Frans → Nederlands" : "Nederlands → Frans"}</div>
+        <div className="word">{cur.prompt}</div>
+      </div>
+      <div className="choices">
+        {cur.choices.map((c) => {
+          let cls = "choice-btn";
+          if (selected) {
+            cls += " locked";
+            if (c === cur.answer) cls += " correct";
+            else if (c === selected) cls += " wrong";
+          }
+          return <button key={c} className={cls} onClick={() => handleChoice(c)}>{c}</button>;
+        })}
+      </div>
+      {selected && <button className="next-btn" onClick={() => { setQi(qi + 1); setSelected(null); }}>Volgende →</button>}
+    </>
+  );
+}
+
+// ─── VERB QUIZ ──────────────────────────────────────────────────────
+function VerbQuiz() {
+  const pronouns = ["je", "tu", "il/elle/on", "nous", "vous", "ils/elles"];
+  const verbKeys = Object.keys(VERBS);
+  const [questions, setQuestions] = useState([]);
+  const [qi, setQi] = useState(0);
+  const [input, setInput] = useState("");
+  const [feedback, setFeedback] = useState(null);
+  const [score, setScore] = useState({ correct: 0, wrong: 0 });
+  const [started, setStarted] = useState(false);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (started && inputRef.current) inputRef.current.focus();
+  }, [qi, started]);
+
+  const start = () => {
+    const qs = [];
+    // irregular verbs
+    verbKeys.forEach((vk) => {
+      const v = VERBS[vk];
+      shuffle(pronouns).slice(0, 3).forEach((p) => {
+        qs.push({ type: "conjugate", verb: vk, label: v.label, pronoun: p, answer: v.present[p] });
+      });
+    });
+    // -er verb endings
+    pronouns.forEach((p) => {
+      qs.push({ type: "er", pronoun: p, answer: ER_ENDINGS[p] });
+    });
+    // passé composé faire
+    qs.push({ type: "passe", answer: "j'ai fait" });
+    setQuestions(shuffle(qs));
+    setQi(0);
+    setInput("");
+    setFeedback(null);
+    setScore({ correct: 0, wrong: 0 });
+    setStarted(true);
+  };
+
+  if (!started) {
+    return (
+      <>
+        <div className="question-card">
+          <div className="direction">Werkwoorden overzicht</div>
+          {verbKeys.map((vk) => {
+            const v = VERBS[vk];
+            return (
+              <div key={vk} style={{ marginBottom: 16 }}>
+                <div className="word" style={{ fontSize: 18, marginBottom: 8 }}>{v.label}</div>
+                <div className="conjugation-grid">
+                  {pronouns.map((p) => (
+                    <div className="conj-cell" key={p}>
+                      <div className="pronoun">{p}</div>
+                      <div className="form">{v.present[p]}</div>
+                    </div>
+                  ))}
+                </div>
+                {v.passeCompose && (
+                  <div style={{ marginTop: 8, fontSize: 13, color: COLORS.orange }}>Passé composé: {v.passeCompose} ({v.note})</div>
+                )}
+              </div>
+            );
+          })}
+          <div style={{ marginTop: 12 }}>
+            <div className="word" style={{ fontSize: 18, marginBottom: 8 }}>Werkwoorden op -er</div>
+            <div className="conjugation-grid">
+              {pronouns.map((p) => (
+                <div className="conj-cell" key={p}>
+                  <div className="pronoun">{p}</div>
+                  <div className="form">{ER_ENDINGS[p]}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <button className="next-btn" onClick={start}>Start quiz ({4 * 3 + 6 + 1} vragen)</button>
+      </>
+    );
+  }
+
+  const done = qi >= questions.length;
+  if (done) {
+    const pct = Math.round((score.correct / questions.length) * 100);
+    return (
+      <div className="result-card">
+        <div className="emoji">{pct >= 80 ? "🎉" : pct >= 55 ? "💪" : "📚"}</div>
+        <h2>{pct >= 80 ? "Top!" : pct >= 55 ? "Goed bezig!" : "Oefen nog even"}</h2>
+        <div className={`score-text ${pct >= 80 ? "great" : pct >= 55 ? "ok" : "low"}`}>{pct}%</div>
+        <div className="detail">{score.correct} / {questions.length} goed</div>
+        <button className="next-btn" onClick={() => setStarted(false)} style={{ marginTop: 20 }}>Opnieuw</button>
+      </div>
+    );
+  }
+
+  const cur = questions[qi];
+  const check = () => {
+    const ok = input.trim().toLowerCase() === cur.answer.toLowerCase();
+    setFeedback(ok ? "correct" : "wrong");
+    setScore((s) => ok ? { ...s, correct: s.correct + 1 } : { ...s, wrong: s.wrong + 1 });
+  };
+
+  const next = () => {
+    setQi(qi + 1);
+    setInput("");
+    setFeedback(null);
+  };
+
+  let prompt = "";
+  if (cur.type === "conjugate") prompt = `${cur.label}: ${cur.pronoun} ...?`;
+  else if (cur.type === "er") prompt = `Werkwoord op -er: ${cur.pronoun} → welke uitgang?`;
+  else prompt = "Passé composé van 'faire' (ik heb gedaan)?";
+
+  return (
+    <>
+      <div className="progress-bar"><div className="progress-fill" style={{ width: `${(qi / questions.length) * 100}%` }} /></div>
+      <div className="score-row">
+        <span>Vraag {qi + 1} / {questions.length}</span>
+        <span><span className="correct">✓ {score.correct}</span> · <span className="wrong">✗ {score.wrong}</span></span>
+      </div>
+      <div className="question-card">
+        <div className="direction">Werkwoorden</div>
+        <div className="word" style={{ fontSize: 20 }}>{prompt}</div>
+      </div>
+      {!feedback && (
+        <div className="input-row">
+          <input ref={inputRef} className="text-input" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && input.trim() && check()} placeholder="Typ je antwoord..." />
+          <button className="submit-btn" disabled={!input.trim()} onClick={check}>Check</button>
+        </div>
+      )}
+      {feedback && (
+        <>
+          <div className={`feedback ${feedback}`}>
+            {feedback === "correct" ? "✓ Goed!" : <>✗ Fout! <div className="answer-line">Antwoord: {cur.answer}</div></>}
+          </div>
+          <button className="next-btn" onClick={next}>Volgende →</button>
+        </>
+      )}
+    </>
+  );
+}
+
+// ─── CLOCK QUIZ ─────────────────────────────────────────────────────
+function ClockQuiz() {
+  const [questions, setQuestions] = useState([]);
+  const [qi, setQi] = useState(0);
+  const [selected, setSelected] = useState(null);
+  const [score, setScore] = useState({ correct: 0, wrong: 0 });
+
+  useEffect(() => {
+    const allAnswers = CLOCK_TIMES.map((t) => t.answer);
+    const qs = shuffle(CLOCK_TIMES).map((t) => ({
+      ...t,
+      choices: pickChoices(t.answer, allAnswers),
+    }));
+    setQuestions(qs);
+  }, []);
+
+  if (!questions.length) return null;
+
+  const done = qi >= questions.length;
+  if (done) {
+    const pct = Math.round((score.correct / questions.length) * 100);
+    return (
+      <div className="result-card">
+        <div className="emoji">{pct >= 80 ? "🕐" : "⏰"}</div>
+        <h2>{pct >= 80 ? "Kloktijden onder de knie!" : "Oefen de klok nog even"}</h2>
+        <div className={`score-text ${pct >= 80 ? "great" : pct >= 55 ? "ok" : "low"}`}>{pct}%</div>
+        <div className="detail">{score.correct} / {questions.length} goed</div>
+        <button className="next-btn" onClick={() => { setQi(0); setSelected(null); setScore({ correct: 0, wrong: 0 }); setQuestions(shuffle([...questions])); }} style={{ marginTop: 20 }}>Opnieuw</button>
+      </div>
+    );
+  }
+
+  const cur = questions[qi];
+  const handleChoice = (c) => {
+    if (selected) return;
+    setSelected(c);
+    if (c === cur.answer) setScore((s) => ({ ...s, correct: s.correct + 1 }));
+    else setScore((s) => ({ ...s, wrong: s.wrong + 1 }));
+  };
+
+  return (
+    <>
+      <div className="progress-bar"><div className="progress-fill" style={{ width: `${(qi / questions.length) * 100}%` }} /></div>
+      <div className="score-row">
+        <span>Vraag {qi + 1} / {questions.length}</span>
+        <span><span className="correct">✓ {score.correct}</span> · <span className="wrong">✗ {score.wrong}</span></span>
+      </div>
+      <div className="question-card">
+        <div className="direction">Hoe laat is het?</div>
+        <div className="clock-container"><ClockFace hour={cur.hour} minute={cur.min} /></div>
+        <div style={{ fontSize: 13, color: COLORS.textDim }}>{cur.hour}:{String(cur.min).padStart(2, "0")}</div>
+      </div>
+      <div className="choices">
+        {cur.choices.map((c) => {
+          let cls = "choice-btn";
+          if (selected) {
+            cls += " locked";
+            if (c === cur.answer) cls += " correct";
+            else if (c === selected) cls += " wrong";
+          }
+          return <button key={c} className={cls} onClick={() => handleChoice(c)}>{c}</button>;
+        })}
+      </div>
+      {selected && <button className="next-btn" onClick={() => { setQi(qi + 1); setSelected(null); }}>Volgende →</button>}
+    </>
+  );
+}
+
+// ─── PHRASE QUIZ ────────────────────────────────────────────────────
+function PhraseQuiz() {
+  const [questions, setQuestions] = useState([]);
+  const [qi, setQi] = useState(0);
+  const [selected, setSelected] = useState(null);
+  const [score, setScore] = useState({ correct: 0, wrong: 0 });
+
+  useEffect(() => {
+    const allNl = PHRASES.map((p) => p[1]);
+    const qs = shuffle(PHRASES).map(([fr, nl]) => ({
+      prompt: fr,
+      answer: nl,
+      choices: pickChoices(nl, allNl),
+    }));
+    setQuestions(qs);
+  }, []);
+
+  if (!questions.length) return null;
+
+  const done = qi >= questions.length;
+  if (done) {
+    const pct = Math.round((score.correct / questions.length) * 100);
+    return (
+      <div className="result-card">
+        <div className="emoji">{pct >= 80 ? "💬" : "🗣️"}</div>
+        <h2>{pct >= 80 ? "Zinnen zitten erin!" : "Nog even herhalen"}</h2>
+        <div className={`score-text ${pct >= 80 ? "great" : pct >= 55 ? "ok" : "low"}`}>{pct}%</div>
+        <div className="detail">{score.correct} / {questions.length} goed</div>
+        <button className="next-btn" onClick={() => { setQi(0); setSelected(null); setScore({ correct: 0, wrong: 0 }); setQuestions(shuffle([...questions])); }} style={{ marginTop: 20 }}>Opnieuw</button>
+      </div>
+    );
+  }
+
+  const cur = questions[qi];
+  const handleChoice = (c) => {
+    if (selected) return;
+    setSelected(c);
+    if (c === cur.answer) setScore((s) => ({ ...s, correct: s.correct + 1 }));
+    else setScore((s) => ({ ...s, wrong: s.wrong + 1 }));
+  };
+
+  return (
+    <>
+      <div className="progress-bar"><div className="progress-fill" style={{ width: `${(qi / questions.length) * 100}%` }} /></div>
+      <div className="score-row">
+        <span>Vraag {qi + 1} / {questions.length}</span>
+        <span><span className="correct">✓ {score.correct}</span> · <span className="wrong">✗ {score.wrong}</span></span>
+      </div>
+      <div className="question-card">
+        <div className="direction">Frans → Nederlands</div>
+        <div className="word" style={{ fontSize: 18 }}>{cur.prompt}</div>
+      </div>
+      <div className="choices">
+        {cur.choices.map((c) => {
+          let cls = "choice-btn";
+          if (selected) {
+            cls += " locked";
+            if (c === cur.answer) cls += " correct";
+            else if (c === selected) cls += " wrong";
+          }
+          return <button key={c} className={cls} onClick={() => handleChoice(c)}>{c}</button>;
+        })}
+      </div>
+      {selected && <button className="next-btn" onClick={() => { setQi(qi + 1); setSelected(null); }}>Volgende →</button>}
+    </>
+  );
+}
+
+// ─── WORD ORDER QUIZ ────────────────────────────────────────────────
+function WordOrderQuiz() {
+  const [qi, setQi] = useState(0);
+  const [input, setInput] = useState("");
+  const [feedback, setFeedback] = useState(null);
+  const [showHint, setShowHint] = useState(false);
+  const [score, setScore] = useState({ correct: 0, wrong: 0 });
+  const inputRef = useRef(null);
+
+  useEffect(() => { if (inputRef.current) inputRef.current.focus(); }, [qi]);
+
+  const qs = WORD_ORDER_QS;
+  const done = qi >= qs.length;
+
+  if (done) {
+    const pct = Math.round((score.correct / qs.length) * 100);
+    return (
+      <div className="result-card">
+        <div className="emoji">🔀</div>
+        <h2>{pct >= 75 ? "Woordvolgorde begrepen!" : "Herhaal de regels"}</h2>
+        <div className={`score-text ${pct >= 75 ? "great" : "ok"}`}>{pct}%</div>
+        <div className="detail">{score.correct} / {qs.length} goed</div>
+        <button className="next-btn" onClick={() => { setQi(0); setInput(""); setFeedback(null); setShowHint(false); setScore({ correct: 0, wrong: 0 }); }} style={{ marginTop: 20 }}>Opnieuw</button>
+      </div>
+    );
+  }
+
+  const cur = qs[qi];
+  const check = () => {
+    const clean = (s) => s.toLowerCase().replace(/[.,!?]/g, "").replace(/\s+/g, " ").trim();
+    const ok = clean(input) === clean(cur.a);
+    setFeedback(ok ? "correct" : "wrong");
+    setScore((s) => ok ? { ...s, correct: s.correct + 1 } : { ...s, wrong: s.wrong + 1 });
+  };
+  const next = () => { setQi(qi + 1); setInput(""); setFeedback(null); setShowHint(false); };
+
+  return (
+    <>
+      <div className="progress-bar"><div className="progress-fill" style={{ width: `${(qi / qs.length) * 100}%` }} /></div>
+      <div className="score-row">
+        <span>Vraag {qi + 1} / {qs.length}</span>
+        <span><span className="correct">✓ {score.correct}</span> · <span className="wrong">✗ {score.wrong}</span></span>
+      </div>
+      <div className="question-card">
+        <div className="direction">Woordvolgorde</div>
+        <div className="word" style={{ fontSize: 17 }}>{cur.q}</div>
+        {!showHint && !feedback && <button className="hint-btn" onClick={() => setShowHint(true)}>💡 Hint</button>}
+        {showHint && <div className="hint-text">{cur.hint}</div>}
+      </div>
+      {!feedback && (
+        <div className="input-row">
+          <input ref={inputRef} className="text-input" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && input.trim() && check()} placeholder="Typ de Franse zin..." />
+          <button className="submit-btn" disabled={!input.trim()} onClick={check}>Check</button>
+        </div>
+      )}
+      {feedback && (
+        <>
+          <div className={`feedback ${feedback}`}>
+            {feedback === "correct" ? "✓ Goed!" : <>✗ Niet helemaal. <div className="answer-line">{cur.a}</div></>}
+          </div>
+          <button className="next-btn" onClick={next}>Volgende →</button>
+        </>
+      )}
+    </>
+  );
+}
+
+// ─── STUDY OVERVIEW ─────────────────────────────────────────────────
+function StudyOverview() {
+  const [section, setSection] = useState("A");
+  const [revealed, setRevealed] = useState({});
+
+  const toggle = (i) => setRevealed((r) => ({ ...r, [i]: !r[i] }));
+
+  const allSections = { ...VOCAB, Zinnen: PHRASES };
+
+  return (
+    <>
+      <div className="section-pills">
+        {["A", "B", "E", "F", "Zinnen"].map((s) => (
+          <button key={s} className={`pill${section === s ? " active" : ""}`} onClick={() => { setSection(s); setRevealed({}); }}>{s}</button>
+        ))}
+      </div>
+      <div className="study-list">
+        {allSections[section].map(([fr, nl], i) => (
+          <div key={i} className="study-row" onClick={() => toggle(i)}>
+            <span className="fr">{fr}</span>
+            <span className={`nl${revealed[i] ? " show" : ""}`}>{revealed[i] ? nl : "Tik om te zien"}</span>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}

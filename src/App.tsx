@@ -1,7 +1,10 @@
 import { Host } from './Host';
 import { Play } from './Play';
+import DanielFranse from './DanielFranse';
 
 export default function App() {
-  const isHost = new URLSearchParams(window.location.search).get('host') === '1';
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('french') === '1') return <DanielFranse />;
+  const isHost = params.get('host') === '1';
   return isHost ? <Host /> : <Play />;
 }
