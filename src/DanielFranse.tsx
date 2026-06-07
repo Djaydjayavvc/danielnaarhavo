@@ -611,6 +611,7 @@ const MODES = [
   { id: "clock", icon: "🕐", label: "Kloktijden", sub: "Hoe laat is het?" },
   { id: "phrases", icon: "💬", label: "Zinnen", sub: "Phrases-clés" },
   { id: "wordorder", icon: "🔀", label: "Woordvolgorde", sub: "Zinsbouw" },
+  { id: "herhaling", icon: "🔁", label: "Herhaling", sub: "Foute antwoorden herhalen" },
   { id: "study", icon: "📖", label: "Overzicht", sub: "Alles bekijken" },
 ];
 
@@ -646,6 +647,7 @@ export default function DanielFranse() {
             {mode === "clock" && <ClockQuiz />}
             {mode === "phrases" && <PhraseQuiz />}
             {mode === "wordorder" && <WordOrderQuiz />}
+            {mode === "herhaling" && <HerhalingQuiz />}
             {mode === "study" && <StudyOverview />}
           </>
         )}
@@ -1127,6 +1129,217 @@ function WordOrderQuiz() {
         <>
           <div className={`feedback ${feedback}`}>
             {feedback === "correct" ? "✓ Goed!" : <>✗ Niet helemaal. <div className="answer-line">{cur.a}</div></>}
+          </div>
+          <button className="next-btn" onClick={next}>Volgende →</button>
+        </>
+      )}
+    </>
+  );
+}
+
+// ─── HERHALING QUIZ ─────────────────────────────────────────────────
+
+interface HerhalingItem {
+  category: string;
+  question: string;
+  correct_answer: string;
+  currentStreak: number;
+}
+
+function herhalingKey(item: HerhalingItem): string {
+  return `${item.question}|||${item.correct_answer}`;
+}
+
+function categoryLabel(cat: string): string {
+  if (cat.startsWith("vocab_")) return "Vocab " + cat.slice(6);
+  if (cat === "werkwoorden") return "Werkwoorden";
+  if (cat === "kloktijden") return "Kloktijden";
+  if (cat === "zinnen") return "Zinnen";
+  if (cat === "woordvolgorde") return "Woordvolgorde";
+  return cat;
+}
+
+function HerhalingQuiz() {
+  const [poolItems, setPoolItems] = useState<HerhalingItem[]>([]);
+  const [queue, setQueue] = useState<HerhalingItem[]>([]);
+  const [qi, setQi] = useState(0);
+  const [input, setInput] = useState("");
+  const [feedback, setFeedback] = useState<"correct" | "wrong" | null>(null);
+  const [streaks, setStreaks] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
+  const [allDone, setAllDone] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    type Row = { category: string; question: string; correct_answer: string; is_correct: boolean };
+
+    supabase
+      .from("quiz_attempts")
+      .select("category, question, correct_answer, is_correct")
+      .eq("subject", "frans")
+      .order("created_at", { ascending: true })
+      .then(({ data, error }) => {
+        if (error) { console.error("Herhaling load:", error); setLoading(false); return; }
+
+        const all = (data ?? []) as Row[];
+
+        // Group by (question, correct_answer)
+        const grouped = new Map<string, Row[]>();
+        for (const a of all) {
+          const key = `${a.question}|||${a.correct_answer}`;
+          if (!grouped.has(key)) grouped.set(key, []);
+          grouped.get(key)!.push(a);
+        }
+
+        const pool: HerhalingItem[] = [];
+        const initStreaks: Record<string, number> = {};
+
+        for (const attempts of grouped.values()) {
+          if (!attempts.some(a => !a.is_correct)) continue; // never wrong → skip
+
+          // Count consecutive correct from the end (newest attempts)
+          let streak = 0;
+          for (let i = attempts.length - 1; i >= 0; i--) {
+            if (attempts[i].is_correct) streak++;
+            else break;
+          }
+          if (streak >= 3) continue; // mastered
+
+          // Use the first non-herhaling attempt for the display category
+          const orig = attempts.find(a => !a.category.startsWith("herhaling")) ?? attempts[0];
+          const item: HerhalingItem = {
+            category: orig.category,
+            question: orig.question,
+            correct_answer: orig.correct_answer,
+            currentStreak: streak,
+          };
+          pool.push(item);
+          initStreaks[herhalingKey(item)] = streak;
+        }
+
+        setPoolItems(pool);
+        setStreaks(initStreaks);
+        setQueue(shuffle(pool));
+        setLoading(false);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!loading && !allDone && inputRef.current) inputRef.current.focus();
+  }, [qi, loading, allDone]);
+
+  const isMastered = (key: string) => (streaks[key] ?? 0) >= 3;
+  const remaining = poolItems.filter(item => !isMastered(herhalingKey(item))).length;
+
+  if (loading) {
+    return (
+      <div className="question-card">
+        <div className="direction">Laden…</div>
+        <div className="word" style={{ fontSize: 18 }}>Foute antwoorden ophalen</div>
+      </div>
+    );
+  }
+
+  if (poolItems.length === 0) {
+    return (
+      <div className="result-card">
+        <div className="emoji">🎉</div>
+        <h2>Geen fouten gevonden!</h2>
+        <div className="detail" style={{ marginTop: 8 }}>Doe eerst wat quizzen en kom dan hier terug.</div>
+      </div>
+    );
+  }
+
+  if (allDone) {
+    return (
+      <div className="result-card">
+        <div className="emoji">🏆</div>
+        <h2>Alles gemeisterd!</h2>
+        <div className="detail" style={{ marginTop: 8 }}>
+          Je hebt alle {poolItems.length} vragen 3× achter elkaar goed. Super goed gedaan!
+        </div>
+      </div>
+    );
+  }
+
+  const cur = queue[qi];
+  if (!cur) return null;
+
+  const check = async () => {
+    if (!input.trim() || feedback) return;
+    const clean = (s: string) => s.toLowerCase().trim();
+    const ok = clean(input) === clean(cur.correct_answer);
+
+    const key = herhalingKey(cur);
+    const newStreak = ok ? (streaks[key] ?? cur.currentStreak) + 1 : 0;
+    setStreaks(prev => ({ ...prev, [key]: newStreak }));
+    setFeedback(ok ? "correct" : "wrong");
+
+    await saveAttempt(cur.category, cur.question, input.trim(), cur.correct_answer, ok);
+  };
+
+  const next = () => {
+    setInput("");
+    setFeedback(null);
+
+    // Advance past any already-mastered queue items
+    let nextQi = qi + 1;
+    while (nextQi < queue.length && isMastered(herhalingKey(queue[nextQi]))) {
+      nextQi++;
+    }
+
+    if (nextQi >= queue.length) {
+      const notMastered = poolItems.filter(item => !isMastered(herhalingKey(item)));
+      if (notMastered.length === 0) {
+        setAllDone(true);
+      } else {
+        setQueue(shuffle(notMastered));
+        setQi(0);
+      }
+    } else {
+      setQi(nextQi);
+    }
+  };
+
+  const curStreak = streaks[herhalingKey(cur)] ?? cur.currentStreak;
+  const dots = "●".repeat(Math.min(curStreak, 3)) + "○".repeat(Math.max(0, 3 - curStreak));
+
+  return (
+    <>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.orange }}>
+          🔁 Nog {remaining} {remaining === 1 ? "vraag" : "vragen"} te oefenen
+        </span>
+        <span style={{ fontSize: 14, color: COLORS.textDim, letterSpacing: 3 }}>
+          {dots} {curStreak}/3
+        </span>
+      </div>
+
+      <div className="question-card">
+        <div className="direction">{categoryLabel(cur.category)}</div>
+        <div className="word" style={{ fontSize: 20 }}>{cur.question}</div>
+      </div>
+
+      {!feedback && (
+        <div className="input-row">
+          <input
+            ref={inputRef}
+            className="text-input"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter" && input.trim() && !feedback) check(); }}
+            placeholder="Typ je antwoord…"
+          />
+          <button className="submit-btn" disabled={!input.trim()} onClick={check}>Check</button>
+        </div>
+      )}
+
+      {feedback && (
+        <>
+          <div className={`feedback ${feedback}`}>
+            {feedback === "correct"
+              ? <>{curStreak >= 3 ? "⭐ Gemeisterd!" : `✓ Goed! (${curStreak}/3 op rij)`}</>
+              : <>✗ Fout! <div className="answer-line">{cur.correct_answer}</div></>}
           </div>
           <button className="next-btn" onClick={next}>Volgende →</button>
         </>
