@@ -205,6 +205,84 @@ async function saveAttempt(
   if (error) console.error("saveAttempt failed:", error);
 }
 
+// ─── HERHALING TYPES & HELPERS ─────────────────────────────────────
+
+interface HerhalingItem {
+  category: string;
+  question: string;
+  correct_answer: string;
+  currentStreak: number;
+}
+
+function herhalingKey(item: HerhalingItem): string {
+  return `${item.question}|||${item.correct_answer}`;
+}
+
+function categoryLabel(cat: string): string {
+  if (cat.startsWith("vocab_")) return "Vocab " + cat.slice(6);
+  if (cat === "werkwoorden") return "Werkwoorden";
+  if (cat === "kloktijden") return "Kloktijden";
+  if (cat === "zinnen") return "Zinnen";
+  if (cat === "woordvolgorde") return "Woordvolgorde";
+  return cat;
+}
+
+async function loadHerhalingData(): Promise<{ items: HerhalingItem[]; streaks: Record<string, number> }> {
+  type Row = { category: string; question: string; correct_answer: string; is_correct: boolean };
+  const { data, error } = await supabase
+    .from("quiz_attempts")
+    .select("category, question, correct_answer, is_correct")
+    .eq("subject", "frans")
+    .order("created_at", { ascending: true });
+  if (error) { console.error("loadHerhalingData:", error); return { items: [], streaks: {} }; }
+
+  const grouped = new Map<string, Row[]>();
+  for (const a of (data ?? []) as Row[]) {
+    const key = `${a.question}|||${a.correct_answer}`;
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key)!.push(a);
+  }
+
+  const items: HerhalingItem[] = [];
+  const streaks: Record<string, number> = {};
+  for (const attempts of grouped.values()) {
+    if (!attempts.some(a => !a.is_correct)) continue;
+    let streak = 0;
+    for (let i = attempts.length - 1; i >= 0; i--) {
+      if (attempts[i].is_correct) streak++;
+      else break;
+    }
+    if (streak >= 3) continue;
+    const orig = attempts.find(a => !a.category.startsWith("herhaling")) ?? attempts[0];
+    const item: HerhalingItem = { category: orig.category, question: orig.question, correct_answer: orig.correct_answer, currentStreak: streak };
+    items.push(item);
+    streaks[herhalingKey(item)] = streak;
+  }
+  return { items, streaks };
+}
+
+function getHerhalingChoices(item: HerhalingItem, allItems: HerhalingItem[]): string[] {
+  const pool: string[] = [...new Set(
+    allItems.filter(i => i.category === item.category).map(i => i.correct_answer)
+  )];
+  if (pool.length < 4) {
+    if (item.category.startsWith("vocab_")) {
+      const s = item.category.slice(6);
+      const pairs = VOCAB[s] ?? [];
+      const isFrToNl = pairs.some(p => p[1] === item.correct_answer);
+      for (const p of pairs) {
+        const v = isFrToNl ? p[1] : p[0];
+        if (!pool.includes(v)) pool.push(v);
+      }
+    } else if (item.category === "zinnen") {
+      for (const p of PHRASES) { if (!pool.includes(p[1])) pool.push(p[1]); }
+    } else if (item.category === "kloktijden") {
+      for (const t of CLOCK_TIMES) { if (!pool.includes(t.answer)) pool.push(t.answer); }
+    }
+  }
+  return pickChoices(item.correct_answer, pool);
+}
+
 // ─── CLOCK FACE COMPONENT ──────────────────────────────────────────
 interface ClockFaceProps {
   hour: number;
@@ -611,13 +689,43 @@ const MODES = [
   { id: "clock", icon: "🕐", label: "Kloktijden", sub: "Hoe laat is het?" },
   { id: "phrases", icon: "💬", label: "Zinnen", sub: "Phrases-clés" },
   { id: "wordorder", icon: "🔀", label: "Woordvolgorde", sub: "Zinsbouw" },
-  { id: "herhaling", icon: "🔁", label: "Herhaling", sub: "Foute antwoorden herhalen" },
   { id: "study", icon: "📖", label: "Overzicht", sub: "Alles bekijken" },
 ];
+
+const CATEGORY_MAP: Record<string, string[]> = {
+  vocab: ["vocab_A", "vocab_B", "vocab_E", "vocab_F"],
+  verbs: ["werkwoorden"],
+  clock: ["kloktijden"],
+  phrases: ["zinnen"],
+  wordorder: ["woordvolgorde"],
+};
 
 // ─── MAIN COMPONENT ────────────────────────────────────────────────
 export default function DanielFranse() {
   const [mode, setMode] = useState<string | null>(null);
+  const [herhalingItems, setHerhalingItems] = useState<HerhalingItem[]>([]);
+  const [herhalingStreaks, setHerhalingStreaks] = useState<Record<string, number>>({});
+  const [herhalingLoading, setHerhalingLoading] = useState(true);
+
+  useEffect(() => {
+    loadHerhalingData().then(({ items, streaks }) => {
+      setHerhalingItems(items);
+      setHerhalingStreaks(streaks);
+      setHerhalingLoading(false);
+    });
+  }, []);
+
+  const onHerhalingStreak = (key: string, newStreak: number) => {
+    setHerhalingStreaks(prev => ({ ...prev, [key]: newStreak }));
+  };
+
+  const herhalingIsMastered = (key: string) => (herhalingStreaks[key] ?? 0) >= 3;
+  const herhalingRemaining = herhalingItems.filter(item => !herhalingIsMastered(herhalingKey(item))).length;
+
+  const modeCount = (modeId: string): number => {
+    const cats = CATEGORY_MAP[modeId] ?? [];
+    return herhalingItems.filter(item => cats.includes(item.category) && !herhalingIsMastered(herhalingKey(item))).length;
+  };
 
   return (
     <>
@@ -630,15 +738,39 @@ export default function DanielFranse() {
         </div>
 
         {!mode ? (
-          <div className="menu-grid">
-            {MODES.map((m) => (
-              <div key={m.id} className={`menu-btn${m.id === "study" ? " full" : ""}`} onClick={() => setMode(m.id)}>
-                <div className="icon">{m.icon}</div>
-                <div className="label">{m.label}</div>
-                <div className="sub">{m.sub}</div>
+          <>
+            <div
+              className="menu-btn full"
+              style={{
+                marginBottom: 10,
+                background: herhalingRemaining > 0 ? "rgba(245,158,11,.13)" : undefined,
+                borderColor: herhalingRemaining > 0 ? COLORS.orange : undefined,
+              }}
+              onClick={() => setMode("herhaling")}
+            >
+              <div className="icon">🔁</div>
+              <div className="label">Herhaling</div>
+              <div className="sub">
+                {herhalingLoading
+                  ? "Laden…"
+                  : herhalingRemaining > 0
+                    ? `${herhalingRemaining} vragen te oefenen`
+                    : "Geen openstaande vragen"}
               </div>
-            ))}
-          </div>
+            </div>
+            <div className="menu-grid">
+              {MODES.map((m) => {
+                const count = modeCount(m.id);
+                return (
+                  <div key={m.id} className={`menu-btn${m.id === "study" ? " full" : ""}`} onClick={() => setMode(m.id)}>
+                    <div className="icon">{m.icon}</div>
+                    <div className="label">{m.label}{count > 0 ? ` (${count} 🔁)` : ""}</div>
+                    <div className="sub">{m.sub}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         ) : (
           <>
             <button className="back-btn" onClick={() => setMode(null)}>← Terug naar menu</button>
@@ -647,7 +779,14 @@ export default function DanielFranse() {
             {mode === "clock" && <ClockQuiz />}
             {mode === "phrases" && <PhraseQuiz />}
             {mode === "wordorder" && <WordOrderQuiz />}
-            {mode === "herhaling" && <HerhalingQuiz />}
+            {mode === "herhaling" && (
+              <HerhalingQuiz
+                allItems={herhalingItems}
+                streaks={herhalingStreaks}
+                loading={herhalingLoading}
+                onStreak={onHerhalingStreak}
+              />
+            )}
             {mode === "study" && <StudyOverview />}
           </>
         )}
@@ -1137,178 +1276,239 @@ function WordOrderQuiz() {
   );
 }
 
-// ─── HERHALING QUIZ ─────────────────────────────────────────────────
+// ─── HERHALING COMPONENTS ───────────────────────────────────────────
 
-interface HerhalingItem {
-  category: string;
-  question: string;
-  correct_answer: string;
-  currentStreak: number;
+interface HerhalingQuizProps {
+  allItems: HerhalingItem[];
+  streaks: Record<string, number>;
+  loading: boolean;
+  onStreak: (key: string, newStreak: number) => void;
 }
 
-function herhalingKey(item: HerhalingItem): string {
-  return `${item.question}|||${item.correct_answer}`;
-}
-
-function categoryLabel(cat: string): string {
-  if (cat.startsWith("vocab_")) return "Vocab " + cat.slice(6);
-  if (cat === "werkwoorden") return "Werkwoorden";
-  if (cat === "kloktijden") return "Kloktijden";
-  if (cat === "zinnen") return "Zinnen";
-  if (cat === "woordvolgorde") return "Woordvolgorde";
-  return cat;
-}
-
-function HerhalingQuiz() {
-  const [poolItems, setPoolItems] = useState<HerhalingItem[]>([]);
-  const [queue, setQueue] = useState<HerhalingItem[]>([]);
-  const [qi, setQi] = useState(0);
-  const [input, setInput] = useState("");
-  const [feedback, setFeedback] = useState<"correct" | "wrong" | null>(null);
-  const [streaks, setStreaks] = useState<Record<string, number>>({});
-  const [loading, setLoading] = useState(true);
-  const [allDone, setAllDone] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    type Row = { category: string; question: string; correct_answer: string; is_correct: boolean };
-
-    supabase
-      .from("quiz_attempts")
-      .select("category, question, correct_answer, is_correct")
-      .eq("subject", "frans")
-      .order("created_at", { ascending: true })
-      .then(({ data, error }) => {
-        if (error) { console.error("Herhaling load:", error); setLoading(false); return; }
-
-        const all = (data ?? []) as Row[];
-
-        // Group by (question, correct_answer)
-        const grouped = new Map<string, Row[]>();
-        for (const a of all) {
-          const key = `${a.question}|||${a.correct_answer}`;
-          if (!grouped.has(key)) grouped.set(key, []);
-          grouped.get(key)!.push(a);
-        }
-
-        const pool: HerhalingItem[] = [];
-        const initStreaks: Record<string, number> = {};
-
-        for (const attempts of grouped.values()) {
-          if (!attempts.some(a => !a.is_correct)) continue; // never wrong → skip
-
-          // Count consecutive correct from the end (newest attempts)
-          let streak = 0;
-          for (let i = attempts.length - 1; i >= 0; i--) {
-            if (attempts[i].is_correct) streak++;
-            else break;
-          }
-          if (streak >= 3) continue; // mastered
-
-          // Use the first non-herhaling attempt for the display category
-          const orig = attempts.find(a => !a.category.startsWith("herhaling")) ?? attempts[0];
-          const item: HerhalingItem = {
-            category: orig.category,
-            question: orig.question,
-            correct_answer: orig.correct_answer,
-            currentStreak: streak,
-          };
-          pool.push(item);
-          initStreaks[herhalingKey(item)] = streak;
-        }
-
-        setPoolItems(pool);
-        setStreaks(initStreaks);
-        setQueue(shuffle(pool));
-        setLoading(false);
-      });
-  }, []);
-
-  useEffect(() => {
-    if (!loading && !allDone && inputRef.current) inputRef.current.focus();
-  }, [qi, loading, allDone]);
+function HerhalingQuiz({ allItems, streaks, loading, onStreak }: HerhalingQuizProps) {
+  const [view, setView] = useState<"entry" | "quiz">("entry");
+  const [quizFilter, setQuizFilter] = useState<string | null>(null);
 
   const isMastered = (key: string) => (streaks[key] ?? 0) >= 3;
-  const remaining = poolItems.filter(item => !isMastered(herhalingKey(item))).length;
+  const remaining = allItems.filter(item => !isMastered(herhalingKey(item)));
 
   if (loading) {
     return (
       <div className="question-card">
         <div className="direction">Laden…</div>
-        <div className="word" style={{ fontSize: 18 }}>Foute antwoorden ophalen</div>
+        <div className="word" style={{ fontSize: 18 }}>Herhaling ophalen</div>
       </div>
     );
   }
 
-  if (poolItems.length === 0) {
+  if (view === "quiz") {
+    const sessionItems = quizFilter
+      ? allItems.filter(item => item.category === quizFilter && !isMastered(herhalingKey(item)))
+      : remaining;
+    return (
+      <HerhalingSession
+        items={sessionItems}
+        allItems={allItems}
+        streaks={streaks}
+        onStreak={onStreak}
+        onDone={() => setView("entry")}
+      />
+    );
+  }
+
+  return (
+    <HerhalingEntry
+      allItems={allItems}
+      streaks={streaks}
+      onStartAll={() => { setQuizFilter(null); setView("quiz"); }}
+      onStartCategory={(cat) => { setQuizFilter(cat); setView("quiz"); }}
+    />
+  );
+}
+
+function HerhalingEntry({
+  allItems,
+  streaks,
+  onStartAll,
+  onStartCategory,
+}: {
+  allItems: HerhalingItem[];
+  streaks: Record<string, number>;
+  onStartAll: () => void;
+  onStartCategory: (cat: string) => void;
+}) {
+  const isMastered = (key: string) => (streaks[key] ?? 0) >= 3;
+  const remaining = allItems.filter(item => !isMastered(herhalingKey(item)));
+
+  if (allItems.length === 0) {
     return (
       <div className="result-card">
-        <div className="emoji">🎉</div>
-        <h2>Geen fouten gevonden!</h2>
-        <div className="detail" style={{ marginTop: 8 }}>Doe eerst wat quizzen en kom dan hier terug.</div>
+        <div className="emoji">✨</div>
+        <h2>Nog geen fouten!</h2>
+        <div className="detail" style={{ marginTop: 8 }}>Maak eerst wat quizzen en kom dan hier terug.</div>
       </div>
     );
   }
 
-  if (allDone) {
-    return (
-      <div className="result-card">
-        <div className="emoji">🏆</div>
-        <h2>Alles gemeisterd!</h2>
-        <div className="detail" style={{ marginTop: 8 }}>
-          Je hebt alle {poolItems.length} vragen 3× achter elkaar goed. Super goed gedaan!
+  const CAT_ORDER = ["vocab_A", "vocab_B", "vocab_E", "vocab_F", "zinnen", "kloktijden", "werkwoorden", "woordvolgorde"];
+  const catInfos: { cat: string; rem: number }[] = [];
+  const seenCats = new Set<string>();
+
+  for (const cat of CAT_ORDER) {
+    const inCat = allItems.filter(item => item.category === cat);
+    if (inCat.length === 0) continue;
+    seenCats.add(cat);
+    catInfos.push({ cat, rem: inCat.filter(item => !isMastered(herhalingKey(item))).length });
+  }
+  for (const item of allItems) {
+    if (seenCats.has(item.category)) continue;
+    seenCats.add(item.category);
+    const inCat = allItems.filter(i => i.category === item.category);
+    catInfos.push({ cat: item.category, rem: inCat.filter(i => !isMastered(herhalingKey(i))).length });
+  }
+
+  return (
+    <>
+      <div className="question-card" style={{ textAlign: "center", marginBottom: 12 }}>
+        <div className="direction">Te herhalen</div>
+        <div className="word">{remaining.length}</div>
+        <div style={{ fontSize: 13, color: COLORS.textDim, marginTop: 4 }}>
+          {remaining.length === 0
+            ? "Alles gemeisterd! 🏆"
+            : `van de ${allItems.length} vragen nog open`}
         </div>
       </div>
-    );
-  }
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+        {catInfos.map(({ cat, rem }) => {
+          const done = rem === 0;
+          return (
+            <div key={cat} style={{
+              display: "flex", alignItems: "center", gap: 10,
+              background: done ? "rgba(34,197,94,.08)" : COLORS.card,
+              border: `1px solid ${done ? COLORS.green : COLORS.border}`,
+              borderRadius: 12, padding: "10px 14px",
+            }}>
+              <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: COLORS.textBright }}>
+                {categoryLabel(cat)}
+              </span>
+              {done ? (
+                <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.green }}>✓ Klaar</span>
+              ) : (
+                <>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.orange, minWidth: 36, textAlign: "right" }}>
+                    {rem} 🔁
+                  </span>
+                  <button
+                    className="submit-btn"
+                    style={{ padding: "6px 14px", fontSize: 12, borderRadius: 8, marginLeft: 4 }}
+                    onClick={() => onStartCategory(cat)}
+                  >
+                    Oefen
+                  </button>
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {remaining.length > 0 ? (
+        <button className="next-btn" onClick={onStartAll}>
+          🔁 Start alles ({remaining.length})
+        </button>
+      ) : (
+        <div className="result-card">
+          <div className="emoji">🏆</div>
+          <h2>Alles gemeisterd!</h2>
+          <div className="detail" style={{ marginTop: 8 }}>
+            Je hebt alle vragen 3× achter elkaar goed. Geweldig!
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function HerhalingSession({
+  items,
+  allItems,
+  streaks,
+  onStreak,
+  onDone,
+}: {
+  items: HerhalingItem[];
+  allItems: HerhalingItem[];
+  streaks: Record<string, number>;
+  onStreak: (key: string, newStreak: number) => void;
+  onDone: () => void;
+}) {
+  const [queue, setQueue] = useState<HerhalingItem[]>(() => shuffle([...items]));
+  const [qi, setQi] = useState(0);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [input, setInput] = useState("");
+  const [feedback, setFeedback] = useState<"correct" | "wrong" | null>(null);
+  const [localStreaks, setLocalStreaks] = useState<Record<string, number>>({});
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const getStreak = (key: string) => localStreaks[key] ?? streaks[key] ?? 0;
+  const isMastered = (key: string) => getStreak(key) >= 3;
+  const isTyped = (cat: string) => cat === "werkwoorden" || cat === "woordvolgorde";
+  const remaining = items.filter(item => !isMastered(herhalingKey(item))).length;
+
+  useEffect(() => {
+    const cur = queue[qi];
+    if (!feedback && cur && isTyped(cur.category) && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [qi, feedback, queue]);
 
   const cur = queue[qi];
   if (!cur) return null;
 
-  const check = async () => {
-    if (!input.trim() || feedback) return;
-    const clean = (s: string) => s.toLowerCase().trim();
-    const ok = clean(input) === clean(cur.correct_answer);
+  const typed = isTyped(cur.category);
+  const choices = typed ? [] : getHerhalingChoices(cur, allItems);
 
+  const submit = async (answer: string) => {
+    if (feedback) return;
     const key = herhalingKey(cur);
-    const newStreak = ok ? (streaks[key] ?? cur.currentStreak) + 1 : 0;
-    setStreaks(prev => ({ ...prev, [key]: newStreak }));
+    const ok = typed
+      ? answer.toLowerCase().trim() === cur.correct_answer.toLowerCase().trim()
+      : answer === cur.correct_answer;
+    const newStreak = ok ? getStreak(key) + 1 : 0;
+    setLocalStreaks(prev => ({ ...prev, [key]: newStreak }));
+    onStreak(key, newStreak);
     setFeedback(ok ? "correct" : "wrong");
-
-    await saveAttempt(cur.category, cur.question, input.trim(), cur.correct_answer, ok);
+    await saveAttempt(cur.category, cur.question, answer, cur.correct_answer, ok);
   };
 
   const next = () => {
+    setSelected(null);
     setInput("");
     setFeedback(null);
 
-    // Advance past any already-mastered queue items
     let nextQi = qi + 1;
-    while (nextQi < queue.length && isMastered(herhalingKey(queue[nextQi]))) {
-      nextQi++;
-    }
+    while (nextQi < queue.length && isMastered(herhalingKey(queue[nextQi]))) nextQi++;
 
     if (nextQi >= queue.length) {
-      const notMastered = poolItems.filter(item => !isMastered(herhalingKey(item)));
-      if (notMastered.length === 0) {
-        setAllDone(true);
-      } else {
-        setQueue(shuffle(notMastered));
-        setQi(0);
-      }
+      const notMastered = items.filter(item => !isMastered(herhalingKey(item)));
+      if (notMastered.length === 0) { onDone(); return; }
+      const newQ = shuffle([...notMastered]);
+      setQueue(newQ);
+      setQi(0);
     } else {
       setQi(nextQi);
     }
   };
 
-  const curStreak = streaks[herhalingKey(cur)] ?? cur.currentStreak;
+  const curStreak = getStreak(herhalingKey(cur));
   const dots = "●".repeat(Math.min(curStreak, 3)) + "○".repeat(Math.max(0, 3 - curStreak));
 
   return (
     <>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
         <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.orange }}>
-          🔁 Nog {remaining} {remaining === 1 ? "vraag" : "vragen"} te oefenen
+          🔁 Nog {remaining} {remaining === 1 ? "vraag" : "vragen"}
         </span>
         <span style={{ fontSize: 14, color: COLORS.textDim, letterSpacing: 3 }}>
           {dots} {curStreak}/3
@@ -1320,21 +1520,54 @@ function HerhalingQuiz() {
         <div className="word" style={{ fontSize: 20 }}>{cur.question}</div>
       </div>
 
-      {!feedback && (
+      {!feedback && !typed && (
+        <div className="choices">
+          {choices.map(c => (
+            <button
+              key={c}
+              className={`choice-btn${selected === c ? " selected" : ""}`}
+              onClick={() => { if (!feedback) { setSelected(c); submit(c); } }}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {!feedback && typed && (
         <div className="input-row">
           <input
             ref={inputRef}
             className="text-input"
             value={input}
             onChange={e => setInput(e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter" && input.trim() && !feedback) check(); }}
+            onKeyDown={e => { if (e.key === "Enter" && input.trim()) submit(input.trim()); }}
             placeholder="Typ je antwoord…"
           />
-          <button className="submit-btn" disabled={!input.trim()} onClick={check}>Check</button>
+          <button className="submit-btn" disabled={!input.trim()} onClick={() => { if (input.trim()) submit(input.trim()); }}>Check</button>
         </div>
       )}
 
-      {feedback && (
+      {feedback && !typed && (
+        <>
+          <div className="choices">
+            {choices.map(c => {
+              let cls = "choice-btn locked";
+              if (c === cur.correct_answer) cls += " correct";
+              else if (c === selected) cls += " wrong";
+              return <button key={c} className={cls}>{c}</button>;
+            })}
+          </div>
+          <div className={`feedback ${feedback}`}>
+            {feedback === "correct"
+              ? <>{curStreak >= 3 ? "⭐ Gemeisterd!" : `✓ Goed! (${curStreak}/3 op rij)`}</>
+              : <>✗ Fout! <div className="answer-line">{cur.correct_answer}</div></>}
+          </div>
+          <button className="next-btn" onClick={next}>Volgende →</button>
+        </>
+      )}
+
+      {feedback && typed && (
         <>
           <div className={`feedback ${feedback}`}>
             {feedback === "correct"
