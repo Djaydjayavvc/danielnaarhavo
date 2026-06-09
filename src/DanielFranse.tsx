@@ -132,20 +132,46 @@ const ER_ENDINGS: Record<string, string> = {
 };
 
 const CLOCK_TIMES = [
+  // Hele uren
   { hour: 1, min: 0, answer: "une heure" },
+  { hour: 3, min: 0, answer: "trois heures" },
+  { hour: 7, min: 0, answer: "sept heures" },
+  { hour: 11, min: 0, answer: "onze heures" },
+  // Et quart (kwart over)
   { hour: 2, min: 15, answer: "deux heures et quart" },
+  { hour: 4, min: 15, answer: "quatre heures et quart" },
+  { hour: 9, min: 15, answer: "neuf heures et quart" },
+  { hour: 12, min: 15, answer: "midi et quart" },
+  { hour: 0, min: 15, answer: "minuit et quart" },
+  // Et demie (half)
   { hour: 3, min: 30, answer: "trois heures et demie" },
+  { hour: 5, min: 30, answer: "cinq heures et demie" },
+  { hour: 10, min: 30, answer: "dix heures et demie" },
+  { hour: 12, min: 30, answer: "midi et demie" },
+  { hour: 0, min: 30, answer: "minuit et demie" },
+  // Moins le quart (kwart voor)
   { hour: 4, min: 45, answer: "cinq heures moins le quart" },
+  { hour: 6, min: 45, answer: "sept heures moins le quart" },
+  { hour: 11, min: 45, answer: "midi moins le quart" },
+  { hour: 12, min: 45, answer: "une heure moins le quart" },
+  // Minuten erbij (rechts van 12)
+  { hour: 1, min: 5, answer: "une heure cinq" },
   { hour: 5, min: 10, answer: "cinq heures dix" },
   { hour: 6, min: 20, answer: "six heures vingt" },
   { hour: 7, min: 25, answer: "sept heures vingt-cinq" },
+  { hour: 8, min: 20, answer: "huit heures vingt" },
+  // Moins minuten (links van 12)
+  { hour: 2, min: 35, answer: "trois heures moins vingt-cinq" },
   { hour: 8, min: 35, answer: "neuf heures moins vingt-cinq" },
   { hour: 9, min: 40, answer: "dix heures moins vingt" },
   { hour: 10, min: 50, answer: "onze heures moins dix" },
+  { hour: 6, min: 50, answer: "sept heures moins dix" },
   { hour: 11, min: 55, answer: "midi moins cinq" },
+  // Midi en minuit met minuten
   { hour: 12, min: 0, answer: "midi" },
-  { hour: 12, min: 5, answer: "midi cinq" },
   { hour: 0, min: 0, answer: "minuit" },
+  { hour: 12, min: 5, answer: "midi cinq" },
+  { hour: 12, min: 10, answer: "midi dix" },
 ];
 
 const WORD_ORDER_QS = [
@@ -169,6 +195,44 @@ const WORD_ORDER_QS = [
     a: "Il a fait un dessin.",
     hint: "Passé composé van faire = avoir + fait.",
   },
+];
+
+type GrammarQ =
+  | { type: "mc"; cat: string; question: string; answer: string; choices: string[] }
+  | { type: "text"; cat: string; question: string; answer: string; hint?: string };
+
+const GRAMMAR_QS: GrammarQ[] = [
+  // ── Vul de juiste vorm in ──
+  { type: "mc", cat: "Conjugatie", question: "Nous ___ au cinéma. (aller)", answer: "allons", choices: ["allons", "allez", "vont", "vais"] },
+  { type: "mc", cat: "Conjugatie", question: "Je ___ mes devoirs. (faire)", answer: "fais", choices: ["fais", "fait", "font", "faites"] },
+  { type: "mc", cat: "Conjugatie", question: "Il ___ content. (être)", answer: "est", choices: ["est", "suis", "es", "sont"] },
+  { type: "mc", cat: "Conjugatie", question: "Tu ___ un frère? (avoir)", answer: "as", choices: ["as", "ai", "a", "avons"] },
+  { type: "mc", cat: "Conjugatie", question: "Ils ___ du sport. (faire)", answer: "font", choices: ["font", "fait", "fais", "faisons"] },
+  { type: "mc", cat: "Conjugatie", question: "Vous ___ en vacances? (aller)", answer: "allez", choices: ["allez", "allons", "vont", "vas"] },
+  { type: "mc", cat: "Conjugatie", question: "Elle ___ intelligente. (être)", answer: "est", choices: ["est", "êtes", "sommes", "sont"] },
+  { type: "mc", cat: "Conjugatie", question: "Nous ___ faim. (avoir)", answer: "avons", choices: ["avons", "avez", "ont", "ai"] },
+  // ── Welke tijd is dit? ──
+  { type: "mc", cat: "Welke tijd?", question: "\"Je joue de la guitare.\"", answer: "tegenwoordige tijd", choices: ["tegenwoordige tijd", "passé composé"] },
+  { type: "mc", cat: "Welke tijd?", question: "\"Il a fait du sport.\"", answer: "passé composé", choices: ["tegenwoordige tijd", "passé composé"] },
+  { type: "mc", cat: "Welke tijd?", question: "\"Nous allons au cinéma.\"", answer: "tegenwoordige tijd", choices: ["tegenwoordige tijd", "passé composé"] },
+  { type: "mc", cat: "Welke tijd?", question: "\"Tu as joué au foot?\"", answer: "passé composé", choices: ["tegenwoordige tijd", "passé composé"] },
+  { type: "mc", cat: "Welke tijd?", question: "\"Elle fait de la danse.\"", answer: "tegenwoordige tijd", choices: ["tegenwoordige tijd", "passé composé"] },
+  { type: "mc", cat: "Welke tijd?", question: "\"Ils ont gagné le match.\"", answer: "passé composé", choices: ["tegenwoordige tijd", "passé composé"] },
+  // ── Maak de passé composé ──
+  { type: "text", cat: "Passé composé", question: "Maak passé composé: \"Je fais un dessin.\"", answer: "J'ai fait un dessin.", hint: "faire → avoir + fait. Let op apostrof: J'ai..." },
+  { type: "text", cat: "Passé composé", question: "Maak passé composé: \"Il fait du basket.\"", answer: "Il a fait du basket.", hint: "il → avoir (a) + fait" },
+  { type: "text", cat: "Passé composé", question: "Maak passé composé: \"Nous faisons du sport.\"", answer: "Nous avons fait du sport.", hint: "nous → avoir (avons) + fait" },
+  // ── -er werkwoorden in context ──
+  { type: "mc", cat: "-er werkwoorden", question: "Ils ___ à huit heures. (commencer)", answer: "commencent", choices: ["commencent", "commence", "commencez", "commençons"] },
+  { type: "mc", cat: "-er werkwoorden", question: "Tu ___ le piano? (jouer)", answer: "joues", choices: ["joues", "joue", "jouez", "jouons"] },
+  { type: "mc", cat: "-er werkwoorden", question: "Nous ___ le match. (gagner)", answer: "gagnons", choices: ["gagnons", "gagnez", "gagnent", "gagne"] },
+  { type: "mc", cat: "-er werkwoorden", question: "Elle ___ à danser. (commencer)", answer: "commence", choices: ["commence", "commencent", "commencez", "commençons"] },
+  { type: "mc", cat: "-er werkwoorden", question: "Vous ___ au foot? (jouer)", answer: "jouez", choices: ["jouez", "joue", "jouons", "jouent"] },
+  // ── Fix de woordvolgorde ──
+  { type: "text", cat: "Woordvolgorde", question: "Zet in de juiste volgorde: cinéma / au / je / vais", answer: "Je vais au cinéma.", hint: "Werkwoord volgt direct na het onderwerp." },
+  { type: "text", cat: "Woordvolgorde", question: "Zet in de juiste volgorde: fait / il / un / dessin / a", answer: "Il a fait un dessin.", hint: "Passé composé: onderwerp + avoir + fait + rest." },
+  { type: "text", cat: "Woordvolgorde", question: "Zet in de juiste volgorde: foot / du / faisons / nous", answer: "Nous faisons du foot.", hint: "Onderwerp + werkwoord + rest." },
+  { type: "text", cat: "Woordvolgorde", question: "Zet in de juiste volgorde: demain / match / un / j'ai", answer: "J'ai un match demain.", hint: "Tijdsbepaling gaat naar het einde van de zin." },
 ];
 
 // ─── HELPERS ────────────────────────────────────────────────────────
@@ -224,6 +288,7 @@ function categoryLabel(cat: string): string {
   if (cat === "kloktijden") return "Kloktijden";
   if (cat === "zinnen") return "Zinnen";
   if (cat === "woordvolgorde") return "Woordvolgorde";
+  if (cat === "grammatica") return "Grammatica";
   return cat;
 }
 
@@ -680,6 +745,58 @@ const css = `
   .study-row .fr { font-weight: 600; color: ${COLORS.textBright}; font-size: 14px; }
   .study-row .nl { color: ${COLORS.textDim}; font-size: 13px; }
   .study-row .nl.show { color: ${COLORS.green}; }
+
+  .summary-section {
+    background: ${COLORS.card};
+    border: 1px solid ${COLORS.border};
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 12px;
+  }
+  .summary-section h2 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: ${COLORS.textBright};
+    margin-bottom: 14px;
+  }
+  .summary-rule {
+    background: rgba(255,255,255,.04);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+  }
+  .summary-rule h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: ${COLORS.accent};
+    margin-bottom: 6px;
+  }
+  .summary-rule p {
+    font-size: 13px;
+    color: ${COLORS.text};
+    line-height: 1.7;
+  }
+  .summary-tip {
+    background: rgba(245,158,11,.1);
+    border: 1px solid rgba(245,158,11,.2);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    color: ${COLORS.orange};
+    line-height: 1.6;
+  }
+  .summary-example {
+    background: rgba(59,130,246,.08);
+    border: 1px solid rgba(59,130,246,.15);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    color: #93c5fd;
+    line-height: 1.6;
+  }
 `;
 
 // ─── MODES ──────────────────────────────────────────────────────────
@@ -689,7 +806,9 @@ const MODES = [
   { id: "clock", icon: "🕐", label: "Kloktijden", sub: "Hoe laat is het?" },
   { id: "phrases", icon: "💬", label: "Zinnen", sub: "Phrases-clés" },
   { id: "wordorder", icon: "🔀", label: "Woordvolgorde", sub: "Zinsbouw" },
+  { id: "grammar", icon: "✏️", label: "Grammatica", sub: "Conjugaties · Tijden" },
   { id: "study", icon: "📖", label: "Overzicht", sub: "Alles bekijken" },
+  { id: "samenvatting", icon: "📋", label: "Samenvatting", sub: "Ezelsbruggetjes & tips" },
 ];
 
 const CATEGORY_MAP: Record<string, string[]> = {
@@ -698,6 +817,7 @@ const CATEGORY_MAP: Record<string, string[]> = {
   clock: ["kloktijden"],
   phrases: ["zinnen"],
   wordorder: ["woordvolgorde"],
+  grammar: ["grammatica"],
 };
 
 // ─── MAIN COMPONENT ────────────────────────────────────────────────
@@ -761,8 +881,9 @@ export default function DanielFranse() {
             <div className="menu-grid">
               {MODES.map((m) => {
                 const count = modeCount(m.id);
+                const isFull = m.id === "study" || m.id === "samenvatting";
                 return (
-                  <div key={m.id} className={`menu-btn${m.id === "study" ? " full" : ""}`} onClick={() => setMode(m.id)}>
+                  <div key={m.id} className={`menu-btn${isFull ? " full" : ""}`} onClick={() => setMode(m.id)}>
                     <div className="icon">{m.icon}</div>
                     <div className="label">{m.label}{count > 0 ? ` (${count} 🔁)` : ""}</div>
                     <div className="sub">{m.sub}</div>
@@ -787,7 +908,9 @@ export default function DanielFranse() {
                 onStreak={onHerhalingStreak}
               />
             )}
+            {mode === "grammar" && <GrammarQuiz />}
             {mode === "study" && <StudyOverview />}
+            {mode === "samenvatting" && <Samenvatting />}
           </>
         )}
       </div>
@@ -1350,7 +1473,7 @@ function HerhalingEntry({
     );
   }
 
-  const CAT_ORDER = ["vocab_A", "vocab_B", "vocab_E", "vocab_F", "zinnen", "kloktijden", "werkwoorden", "woordvolgorde"];
+  const CAT_ORDER = ["vocab_A", "vocab_B", "vocab_E", "vocab_F", "zinnen", "kloktijden", "werkwoorden", "woordvolgorde", "grammatica"];
   const catInfos: { cat: string; rem: number }[] = [];
   const seenCats = new Set<string>();
 
@@ -1453,7 +1576,7 @@ function HerhalingSession({
 
   const getStreak = (key: string) => localStreaks[key] ?? streaks[key] ?? 0;
   const isMastered = (key: string) => getStreak(key) >= 3;
-  const isTyped = (cat: string) => cat === "werkwoorden" || cat === "woordvolgorde";
+  const isTyped = (cat: string) => cat === "werkwoorden" || cat === "woordvolgorde" || cat === "grammatica";
   const remaining = items.filter(item => !isMastered(herhalingKey(item))).length;
 
   useEffect(() => {
@@ -1578,6 +1701,237 @@ function HerhalingSession({
         </>
       )}
     </>
+  );
+}
+
+// ─── CLOCK HALVES SVG (for Samenvatting) ───────────────────────────
+function ClockHalfsSVG() {
+  return (
+    <svg viewBox="0 0 200 200" style={{ width: 150, height: 150, display: "block", margin: "0 auto 14px" }}>
+      <circle cx="100" cy="100" r="94" fill="#0f1729" stroke="#2a3a5c" strokeWidth="2" />
+      <path d="M 100 6 A 94 94 0 0 1 100 194 L 100 100 Z" fill="rgba(34,197,94,.14)" />
+      <path d="M 100 6 A 94 94 0 0 0 100 194 L 100 100 Z" fill="rgba(245,158,11,.14)" />
+      <line x1="100" y1="6" x2="100" y2="194" stroke="#475569" strokeWidth="1.5" strokeDasharray="4 3" />
+      {[...Array(12)].map((_, i) => {
+        const angle = ((i + 1) * 30 * Math.PI) / 180;
+        const x = 100 + 76 * Math.sin(angle);
+        const y = 100 - 76 * Math.cos(angle);
+        return (
+          <text key={i} x={x} y={y} textAnchor="middle" dominantBaseline="central"
+            style={{ fontSize: 13, fontWeight: 600, fill: "#e2e8f0", fontFamily: "'DM Sans'" }}>
+            {i + 1}
+          </text>
+        );
+      })}
+      <text x="148" y="92" textAnchor="middle" style={{ fontSize: 9, fill: "#22c55e", fontWeight: 700, fontFamily: "'DM Sans'" }}>+min</text>
+      <text x="52" y="92" textAnchor="middle" style={{ fontSize: 9, fill: "#f59e0b", fontWeight: 700, fontFamily: "'DM Sans'" }}>moins</text>
+    </svg>
+  );
+}
+
+// ─── GRAMMAR QUIZ ────────────────────────────────────────────────────
+function GrammarQuiz() {
+  const [questions, setQuestions] = useState<GrammarQ[]>([]);
+  const [qi, setQi] = useState(0);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [input, setInput] = useState("");
+  const [feedback, setFeedback] = useState<"correct" | "wrong" | null>(null);
+  const [showHint, setShowHint] = useState(false);
+  const [score, setScore] = useState({ correct: 0, wrong: 0 });
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setQuestions(shuffle([...GRAMMAR_QS]));
+  }, []);
+
+  useEffect(() => {
+    const cur = questions[qi];
+    if (cur?.type === "text" && !feedback && inputRef.current) inputRef.current.focus();
+  }, [qi, feedback, questions]);
+
+  if (!questions.length) return null;
+
+  const done = qi >= questions.length;
+  if (done) {
+    const pct = Math.round((score.correct / questions.length) * 100);
+    return (
+      <div className="result-card">
+        <div className="emoji">{pct >= 80 ? "🎉" : pct >= 55 ? "💪" : "📚"}</div>
+        <h2>{pct >= 80 ? "Grammatica top!" : pct >= 55 ? "Goed bezig!" : "Blijven oefenen!"}</h2>
+        <div className={`score-text ${pct >= 80 ? "great" : pct >= 55 ? "ok" : "low"}`}>{pct}%</div>
+        <div className="detail">{score.correct} / {questions.length} goed</div>
+        <button className="next-btn" onClick={() => { setQuestions(shuffle([...GRAMMAR_QS])); setQi(0); setSelected(null); setInput(""); setFeedback(null); setShowHint(false); setScore({ correct: 0, wrong: 0 }); }} style={{ marginTop: 20 }}>Opnieuw</button>
+      </div>
+    );
+  }
+
+  const cur = questions[qi];
+
+  const check = (answer: string) => {
+    if (feedback) return;
+    let ok: boolean;
+    if (cur.type === "text") {
+      const clean = (s: string) => s.toLowerCase().replace(/[.,!?]/g, "").replace(/\s+/g, " ").trim();
+      ok = clean(answer) === clean(cur.answer);
+    } else {
+      ok = answer === cur.answer;
+    }
+    setFeedback(ok ? "correct" : "wrong");
+    if (ok) setScore(s => ({ ...s, correct: s.correct + 1 }));
+    else setScore(s => ({ ...s, wrong: s.wrong + 1 }));
+    if (cur.type === "mc") setSelected(answer);
+    saveAttempt("grammatica", cur.question, answer, cur.answer, ok);
+  };
+
+  const next = () => { setQi(qi + 1); setSelected(null); setInput(""); setFeedback(null); setShowHint(false); };
+
+  return (
+    <>
+      <div className="progress-bar"><div className="progress-fill" style={{ width: `${(qi / questions.length) * 100}%` }} /></div>
+      <div className="score-row">
+        <span>Vraag {qi + 1} / {questions.length}</span>
+        <span><span className="correct">✓ {score.correct}</span> · <span className="wrong">✗ {score.wrong}</span></span>
+      </div>
+      <div className="question-card">
+        <div className="direction">{cur.cat}</div>
+        <div className="word" style={{ fontSize: cur.type === "mc" && cur.cat === "Welke tijd?" ? 17 : 18 }}>{cur.question}</div>
+        {cur.type === "text" && !feedback && (
+          <>
+            {!showHint && cur.hint && <button className="hint-btn" onClick={() => setShowHint(true)}>💡 Hint</button>}
+            {showHint && cur.hint && <div className="hint-text">{cur.hint}</div>}
+          </>
+        )}
+      </div>
+      {cur.type === "mc" && !feedback && (
+        <div className="choices">
+          {cur.choices.map(c => (
+            <button key={c} className="choice-btn" onClick={() => check(c)}>{c}</button>
+          ))}
+        </div>
+      )}
+      {cur.type === "text" && !feedback && (
+        <div className="input-row">
+          <input ref={inputRef} className="text-input" value={input} onChange={e => setInput(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter" && input.trim()) check(input.trim()); }}
+            placeholder="Typ je antwoord..." />
+          <button className="submit-btn" disabled={!input.trim()} onClick={() => check(input.trim())}>Check</button>
+        </div>
+      )}
+      {feedback && cur.type === "mc" && (
+        <>
+          <div className="choices">
+            {cur.choices.map(c => {
+              let cls = "choice-btn locked";
+              if (c === cur.answer) cls += " correct";
+              else if (c === selected) cls += " wrong";
+              return <button key={c} className={cls}>{c}</button>;
+            })}
+          </div>
+          <div className={`feedback ${feedback}`}>
+            {feedback === "correct" ? "✓ Goed!" : <>✗ Fout! <div className="answer-line">{cur.answer}</div></>}
+          </div>
+          <button className="next-btn" onClick={next}>Volgende →</button>
+        </>
+      )}
+      {feedback && cur.type === "text" && (
+        <>
+          <div className={`feedback ${feedback}`}>
+            {feedback === "correct" ? "✓ Goed!" : <>✗ Fout! <div className="answer-line">{cur.answer}</div></>}
+          </div>
+          <button className="next-btn" onClick={next}>Volgende →</button>
+        </>
+      )}
+    </>
+  );
+}
+
+// ─── SAMENVATTING ────────────────────────────────────────────────────
+function Samenvatting() {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+      <div className="summary-section">
+        <h2>🕐 Kloktijden</h2>
+        <ClockHalfsSVG />
+        <div className="summary-tip">
+          💡 <strong>Ezelsbruggetje:</strong><br />
+          <strong>Rechts van 12</strong> = je TELT erbij op:<br />
+          cinq → dix → et quart → vingt → vingt-cinq → et demie<br /><br />
+          <strong>Links van 12</strong> = je TREKT eraf van het volgende uur:<br />
+          moins vingt-cinq → moins vingt → moins le quart → moins dix → moins cinq
+        </div>
+        <div className="summary-rule">
+          <h3>⭐ Speciale woorden</h3>
+          <p>
+            12:00 = <strong>midi</strong> (middag) &nbsp;·&nbsp; 0:00 = <strong>minuit</strong> (middernacht)<br />
+            12:30 = <strong>midi et demie</strong> &nbsp;·&nbsp; 0:15 = <strong>minuit et quart</strong><br />
+            12:45 = <strong>une heure moins le quart</strong> (het uur ná midi is 1)
+          </p>
+        </div>
+        <div className="summary-example">
+          <strong>Voorbeeld — hoe laat is 8:40?</strong><br />
+          ➜ 40 minuten past 8 = 20 minuten VOOR 9<br />
+          ➜ 8:40 = <strong>neuf heures moins vingt</strong>
+        </div>
+      </div>
+
+      <div className="summary-section">
+        <h2>✏️ Grammatica</h2>
+
+        <div className="summary-rule">
+          <h3>🔵 Faire (doen/maken)</h3>
+          <p>
+            je <strong>fais</strong> · tu <strong>fais</strong> (hetzelfde!) · il/elle <strong>fait</strong> (s weg)<br />
+            nous <strong>faisons</strong> · vous <strong>faites</strong> · ils <strong>font</strong> (compleet anders!)
+          </p>
+        </div>
+        <div className="summary-tip">
+          💡 <strong>Passé composé van faire = avoir + fait, altijd!</strong><br />
+          j'ai fait · tu as fait · il a fait · nous avons fait · vous avez fait · ils ont fait
+        </div>
+
+        <div className="summary-rule">
+          <h3>🟢 Être (zijn)</h3>
+          <p>
+            je <strong>suis</strong> · tu <strong>es</strong> · il/elle <strong>est</strong><br />
+            nous <strong>sommes</strong> · vous <strong>êtes</strong> · ils <strong>sont</strong><br />
+            Tip: suis/es/est klinken als "swee / eh / eh" — de meervouden zijn compleet anders, gewoon stampen!
+          </p>
+        </div>
+
+        <div className="summary-rule">
+          <h3>🟡 Avoir (hebben)</h3>
+          <p>
+            j'<strong>ai</strong> · tu <strong>as</strong> · il/elle <strong>a</strong><br />
+            nous <strong>avons</strong> · vous <strong>avez</strong> · ils <strong>ont</strong><br />
+            Tip: ai/as/a = superkorte woordjes! De meervouden beginnen met av- (of ont voor ils).
+          </p>
+        </div>
+
+        <div className="summary-rule">
+          <h3>🔴 Aller (gaan)</h3>
+          <p>
+            je <strong>vais</strong> · tu <strong>vas</strong> · il/elle <strong>va</strong><br />
+            nous <strong>allons</strong> · vous <strong>allez</strong> · ils <strong>vont</strong><br />
+            Tip: vais/vas/va beginnen allemaal met <strong>VA</strong>. allons/allez beginnen met <strong>AL</strong>. vont = de uitzondering!
+          </p>
+        </div>
+
+        <div className="summary-rule">
+          <h3>📗 -er werkwoorden</h3>
+          <p>
+            Stam = woord zonder -er. Dan plak je:<br />
+            je: <strong>-e</strong> · tu: <strong>-es</strong> · il/elle: <strong>-e</strong> &nbsp;(je/tu/il klinken <em>hetzelfde</em>!)<br />
+            nous: <strong>-ons</strong> · vous: <strong>-ez</strong> · ils: <strong>-ent</strong> (klinkt als de stam, de -ent is stil)
+          </p>
+        </div>
+
+        <div className="summary-tip">
+          💡 <strong>Woordvolgorde:</strong> Werkwoorden staan in het Frans altijd <strong>naast elkaar</strong> (als buren).<br />
+          Tijdsbepaling (morgen, zaterdag) gaat naar het <strong>BEGIN of EINDE</strong> van de zin, nooit ertussen.<br />
+          ✅ <em>Demain, je vais faire du foot.</em> &nbsp; ✅ <em>Je vais faire du foot demain.</em>
+        </div>
+      </div>
+    </div>
   );
 }
 
