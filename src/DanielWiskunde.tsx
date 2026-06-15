@@ -51,6 +51,7 @@ const css = `
   .wsk-tab.active-h8 { background: ${C.accent}; color: #fff; }
   .wsk-tab.active-h9 { background: ${C.purple}; color: #fff; }
   .wsk-tab.active-her { background: ${C.orange}; color: #fff; }
+  .wsk-tab.active-sam { background: #10b981; color: #fff; }
   .wsk-tab-badge {
     display: inline-block; background: rgba(255,255,255,.25);
     border-radius: 10px; padding: 1px 7px; font-size: 11px; margin-left: 4px;
@@ -192,6 +193,64 @@ const css = `
 
   .wsk-streak-dots { font-size: 18px; letter-spacing: 2px; }
 
+  /* ── Samenvatting ────────────────────────────────────────────────── */
+  .wsk-sam-chapter {
+    font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 800;
+    color: ${C.textBright}; margin: 24px 0 12px; padding-bottom: 8px;
+    border-bottom: 2px solid ${C.border};
+  }
+  .wsk-sam-chapter:first-child { margin-top: 0; }
+  .wsk-sam-block {
+    border-radius: 14px; padding: 16px 16px 12px; margin-bottom: 12px;
+    border: 1px solid transparent;
+  }
+  .wsk-sam-block.green {
+    background: rgba(34,197,94,.08); border-color: rgba(34,197,94,.2);
+  }
+  .wsk-sam-block.orange {
+    background: rgba(245,158,11,.08); border-color: rgba(245,158,11,.2);
+  }
+  .wsk-sam-block.red {
+    background: rgba(239,68,68,.08); border-color: rgba(239,68,68,.2);
+  }
+  .wsk-sam-block h3 {
+    font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 800;
+    letter-spacing: .3px; margin-bottom: 12px;
+  }
+  .wsk-sam-block.green h3 { color: ${C.green}; }
+  .wsk-sam-block.orange h3 { color: ${C.orange}; }
+  .wsk-sam-block.red h3 { color: ${C.red}; }
+  .wsk-sam-subhead {
+    font-size: 13px; font-weight: 700; color: ${C.textBright};
+    margin: 12px 0 6px;
+  }
+  .wsk-sam-subhead:first-of-type { margin-top: 0; }
+  .wsk-sam-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .wsk-sam-list li {
+    font-size: 13px; color: ${C.text}; line-height: 1.55; padding-left: 16px;
+    position: relative;
+  }
+  .wsk-sam-list li::before { content: '•'; position: absolute; left: 0; color: ${C.textDim}; }
+  .wsk-sam-list li strong { color: ${C.textBright}; }
+  .wsk-sam-list li em { color: ${C.accent}; font-style: normal; }
+  .wsk-sam-example {
+    background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.15);
+    border-radius: 10px; padding: 10px 12px; margin-top: 8px;
+    font-size: 12.5px; color: #93c5fd; line-height: 1.6;
+  }
+  .wsk-sam-steps {
+    list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: 4px;
+  }
+  .wsk-sam-steps li {
+    font-size: 13px; color: ${C.text}; line-height: 1.55; padding-left: 22px;
+    position: relative;
+  }
+  .wsk-sam-steps li::before {
+    content: attr(data-n); position: absolute; left: 0;
+    font-weight: 800; color: ${C.accent}; font-size: 12px;
+  }
+  .wsk-sam-steps li strong { color: ${C.textBright}; }
+
   .wsk-host-table {
     width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px;
   }
@@ -306,7 +365,7 @@ interface HerhalingRow {
 
 // ─── MAIN COMPONENT ─────────────────────────────────────────────────────────
 export default function DanielWiskunde({ isHost }: { isHost: boolean }) {
-  const [tab, setTab] = useState<'H8' | 'H9' | 'herhaling'>('H8');
+  const [tab, setTab] = useState<'H8' | 'H9' | 'herhaling' | 'samenvatting'>('H8');
   const [herhalingCount, setHerhalingCount] = useState(0);
 
   const refreshCount = () => fetchHerhalingCount().then(setHerhalingCount);
@@ -331,24 +390,30 @@ export default function DanielWiskunde({ isHost }: { isHost: boolean }) {
           <p>G&amp;R Deel 2 · Hoofdstuk 8 &amp; 9</p>
         </div>
 
-        <div className="wsk-tabs">
+        <div className="wsk-tabs" style={{ fontSize: 11 }}>
           <button
             className={`wsk-tab${tab === 'H8' ? ' active-h8' : ''}`}
             onClick={() => setTab('H8')}
           >
-            H8 Formules
+            H8<br />Formules
           </button>
           <button
             className={`wsk-tab${tab === 'H9' ? ' active-h9' : ''}`}
             onClick={() => setTab('H9')}
           >
-            H9 Symmetrie
+            H9<br />Symmetrie
           </button>
           <button
             className={`wsk-tab${tab === 'herhaling' ? ' active-her' : ''}`}
             onClick={() => setTab('herhaling')}
           >
             🔁{herhalingCount > 0 && <span className="wsk-tab-badge">{herhalingCount}</span>}
+          </button>
+          <button
+            className={`wsk-tab${tab === 'samenvatting' ? ' active-sam' : ''}`}
+            onClick={() => setTab('samenvatting')}
+          >
+            📖<br />Sam.
           </button>
         </div>
 
@@ -361,6 +426,7 @@ export default function DanielWiskunde({ isHost }: { isHost: boolean }) {
         {tab === 'herhaling' && (
           <WiskundeHerhaling onBadgeChange={refreshCount} />
         )}
+        {tab === 'samenvatting' && <WiskundeSamenvatting />}
       </div>
     </>
   );
@@ -1125,6 +1191,141 @@ function WiskundeHost() {
           <div className="detail" style={{ marginTop: 8 }}>Wacht tot Daniel begint met oefenen.</div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── SAMENVATTING ────────────────────────────────────────────────────────────
+function WiskundeSamenvatting() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+
+      {/* ══ H8 FORMULES ══════════════════════════════════════════════ */}
+      <div className="wsk-sam-chapter">📊 H8 — Formules</div>
+
+      {/* ✅ ZEKER KENNEN */}
+      <div className="wsk-sam-block green">
+        <h3>✅ ZEKER KENNEN</h3>
+
+        <p className="wsk-sam-subhead">Belangrijke begrippen</p>
+        <ul className="wsk-sam-list">
+          <li><strong>Begingetal</strong> = het getal ZONDER variabele. Waar de grafiek de y-as snijdt (bij x=0). In een tabel: de waarde onder de 0.</li>
+          <li><strong>Stijggetal</strong> = hoeveel er PER STAP bijkomt. Grafiek gaat <em>OMHOOG</em>.</li>
+          <li><strong>Daalgetal</strong> = hoeveel er PER STAP afgaat. Grafiek gaat <em>OMLAAG</em>.</li>
+          <li><strong>Variabelen</strong> = de letters/woorden die veranderen (bijv. prijs en a, of tijd en afstand).</li>
+        </ul>
+
+        <p className="wsk-sam-subhead" style={{ marginTop: 14 }}>Formule herkennen</p>
+        <div className="wsk-sam-example">
+          inkomsten = 10 + 5t → begingetal = <strong>10</strong>, stijggetal = <strong>5</strong>, variabelen = inkomsten en t<br />
+          tankinhoud = 140 − 0,8a → begingetal = <strong>140</strong>, daalgetal = <strong>0,8</strong>, variabelen = tankinhoud en a
+        </div>
+
+        <p className="wsk-sam-subhead" style={{ marginTop: 14 }}>Tabel invullen</p>
+        <ul className="wsk-sam-list">
+          <li>Vul de waarden van de variabele in de formule in.</li>
+          <li>Voorbeeld: prijs = 12 + 3a, als a = 4 → prijs = 12 + 3×4 = <strong>24</strong></li>
+        </ul>
+
+        <p className="wsk-sam-subhead" style={{ marginTop: 14 }}>Formule maken bij een grafiek</p>
+        <ol className="wsk-sam-steps">
+          <li data-n="1.">Lees het <strong>begingetal</strong> af (waar de lijn de y-as raakt).</li>
+          <li data-n="2.">Neem twee punten die je goed kunt aflezen.</li>
+          <li data-n="3."><strong>Stijggetal</strong> = verschil y-waarden ÷ verschil x-waarden.</li>
+          <li data-n="4.">Formule = begingetal + stijggetal × variabele.</li>
+        </ol>
+
+        <p className="wsk-sam-subhead" style={{ marginTop: 14 }}>Formule maken bij een tabel</p>
+        <ol className="wsk-sam-steps">
+          <li data-n="1."><strong>Begingetal</strong> = waarde bij 0.</li>
+          <li data-n="2."><strong>Stijggetal</strong> = verschil tussen twee opeenvolgende waarden ÷ stap.</li>
+          <li data-n="3.">Zet het in de formule.</li>
+        </ol>
+
+        <p className="wsk-sam-subhead" style={{ marginTop: 14 }}>Formule veranderen</p>
+        <ul className="wsk-sam-list">
+          <li><strong>Begingetal verandert?</strong> → tel op of trek af van het oude begingetal.</li>
+          <li><strong>Stijg/daalgetal verandert?</strong> → tel op of trek af van het oude stijg/daalgetal.</li>
+        </ul>
+      </div>
+
+      {/* 💡 TIPS */}
+      <div className="wsk-sam-block orange">
+        <h3>💡 TIPS &amp; EZELSBRUGGETJES</h3>
+        <ul className="wsk-sam-list">
+          <li><strong>"BeSTe Variabelen"</strong> → Begingetal, Stijg/daalgetal, Tabel, Variabelen — de 4 dingen die je moet herkennen.</li>
+          <li><strong>Begingetal</strong> = "waar begin je?" → altijd bij de y-as (verticale as), altijd bij variabele = 0.</li>
+          <li><strong>Stijggetal</strong> = "de helling van de lijn" → steiler = groter stijggetal.</li>
+          <li><strong>Dalende lijn</strong> = MIN in de formule (bijv. 140 − 0,8a).</li>
+          <li><strong>Stijgende lijn</strong> = PLUS in de formule (bijv. 12 + 3a).</li>
+          <li>Bij tabel: kijk ALTIJD eerst naar het <strong>verschil</strong> tussen opeenvolgende getallen → dat is je stijg/daalgetal.</li>
+          <li>Komma of punt maakt niet uit: 0,8 = 0.8 ✓</li>
+        </ul>
+      </div>
+
+      {/* ══ H9 SYMMETRIE ══════════════════════════════════════════════ */}
+      <div className="wsk-sam-chapter">📐 H9 — Symmetrie</div>
+
+      {/* ✅ ZEKER KENNEN */}
+      <div className="wsk-sam-block green">
+        <h3>✅ ZEKER KENNEN</h3>
+
+        <p className="wsk-sam-subhead">Lijnsymmetrie (spiegelen in een lijn)</p>
+        <ul className="wsk-sam-list">
+          <li>De figuur kun je vouwen langs de symmetrieas → twee gelijke helften.</li>
+          <li>Spiegelbeeld heet <strong>A'B'C'</strong> (letters met accent).</li>
+          <li>Elk punt ligt even ver van de spiegellijn, aan de <strong>andere kant</strong>.</li>
+          <li>Gebruik: <strong>geodriehoek</strong> met loodlijn.</li>
+        </ul>
+
+        <p className="wsk-sam-subhead" style={{ marginTop: 14 }}>Puntsymmetrie (spiegelen in een punt)</p>
+        <ul className="wsk-sam-list">
+          <li>= Draaisymmetrie met draaihoek <strong>180°</strong>.</li>
+          <li>Het punt heet het <strong>"punt van symmetrie"</strong> of "centrum".</li>
+          <li>Trek een lijn van het punt door het centrum, zet dezelfde afstand aan de andere kant uit.</li>
+        </ul>
+
+        <p className="wsk-sam-subhead" style={{ marginTop: 14 }}>Vlakke figuren</p>
+        <ul className="wsk-sam-list">
+          <li><strong>Vierkant:</strong> 4 symmetrieassen, alle zijden gelijk, alle hoeken 90°.</li>
+          <li><strong>Gelijkbenige driehoek:</strong> 1 symmetrieas, 2 gelijke zijden (benen), 2 gelijke basishoeken, 1 tophoek.</li>
+        </ul>
+
+        <p className="wsk-sam-subhead" style={{ marginTop: 14 }}>Hoeken berekenen</p>
+        <ul className="wsk-sam-list">
+          <li><strong>Overstaande hoeken</strong> = GELIJK (tegenover elkaar bij snijpunt).</li>
+          <li><strong>Gestrekte hoek</strong> = 180° (twee hoeken naast elkaar op een lijn).</li>
+          <li><strong>Evenwijdige lijnen + schuifsymmetrie:</strong> W₁ = V₄ (niet V₁!).</li>
+          <li><strong>Hoekensom driehoek</strong> = 180°.</li>
+          <li>ALTIJD de berekening + gebruikte regel opschrijven!</li>
+        </ul>
+      </div>
+
+      {/* 💡 TIPS */}
+      <div className="wsk-sam-block orange">
+        <h3>💡 TIPS &amp; EZELSBRUGGETJES</h3>
+        <ul className="wsk-sam-list">
+          <li>🐘 <strong>"Overstaande hoeken = Olifanten zijn gelijk"</strong> — ze staan tegenOVER elkaar en zijn altijd gelijk.</li>
+          <li><strong>Gestrekte hoek</strong> = denk aan een uitgestrekte arm = 180° (een rechte lijn).</li>
+          <li>Bij hoeken berekenen: schrijf ALTIJD de regel erbij! "overstaande hoeken" of "gestrekte hoek = 180°" tussen haakjes.</li>
+          <li><strong>Puntsymmetrie</strong> = "180° draaien" — draai je boek ondersteboven, ziet het er hetzelfde uit? Dan is het puntsymmetrisch.</li>
+          <li><strong>Symmetrieassen tellen:</strong> vouw het in gedachten. Elke vouwlijn waar beide helften matchen = 1 symmetrieas.</li>
+          <li><strong>Gelijkbenig</strong> = "gelijke benen" → de 2 schuine zijden zijn de benen, de onderkant is de basis.</li>
+        </ul>
+      </div>
+
+      {/* ⚠️ VEELGEMAAKTE FOUTEN */}
+      <div className="wsk-sam-block red">
+        <h3>⚠️ VEELGEMAAKTE FOUTEN</h3>
+        <ul className="wsk-sam-list">
+          <li><strong>Begingetal en stijggetal omwisselen!</strong> → Begingetal staat ZONDER variabele, stijggetal staat VOOR de variabele.</li>
+          <li><strong>Vergeten dat daalgetal positief is</strong> — de MIN zit al in de formule (140 − 0,8a → daalgetal = 0,8, niet −0,8).</li>
+          <li><strong>Bij formule veranderen:</strong> het begingetal en stijggetal APART aanpassen, niet door elkaar.</li>
+          <li><strong>Bij hoeken:</strong> W₁ = V₄ (niet V₁!) bij evenwijdige lijnen — de schuifsymmetrie verwisselt de positie.</li>
+          <li><strong>Bij gelijkbenige driehoek:</strong> de BASISHOEKEN zijn gelijk (niet de tophoek en een basishoek).</li>
+        </ul>
+      </div>
+
     </div>
   );
 }
