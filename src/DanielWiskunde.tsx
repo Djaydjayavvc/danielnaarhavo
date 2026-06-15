@@ -774,6 +774,7 @@ function HerhalingSession({
   const handleAnswer = async (answer: string, isCorrect: boolean) => {
     if (feedback) return;
     setFeedback(isCorrect ? 'correct' : 'wrong');
+    if (curQ) await saveAttempt(curQ, answer, isCorrect);
 
     if (isCorrect) {
       const status = await progressHerhaling(curRow.question_id);
