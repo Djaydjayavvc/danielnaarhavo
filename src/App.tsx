@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Host } from './Host';
 import { Play } from './Play';
 import DanielFranse from './DanielFranse';
+import DanielWiskunde from './DanielWiskunde';
 
 const tabBar = `
   .tab-bar {
@@ -33,7 +34,7 @@ const tabBar = `
 
 export default function App() {
   const isHost = new URLSearchParams(window.location.search).get('host') === '1';
-  const [tab, setTab] = useState<'bio' | 'french'>('bio');
+  const [tab, setTab] = useState<'bio' | 'french' | 'wiskunde'>('bio');
 
   return (
     <>
@@ -45,9 +46,13 @@ export default function App() {
         <button className={`tab-btn${tab === 'french' ? ' active' : ''}`} onClick={() => setTab('french')}>
           🇫🇷 Frans
         </button>
+        <button className={`tab-btn${tab === 'wiskunde' ? ' active' : ''}`} onClick={() => setTab('wiskunde')}>
+          📐 Wiskunde
+        </button>
       </div>
       {tab === 'bio' && (isHost ? <Host /> : <Play />)}
       {tab === 'french' && <DanielFranse />}
+      {tab === 'wiskunde' && <DanielWiskunde isHost={isHost} />}
     </>
   );
 }
