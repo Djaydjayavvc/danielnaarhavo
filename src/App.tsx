@@ -3,6 +3,7 @@ import { Host } from './Host';
 import { Play } from './Play';
 import DanielFranse from './DanielFranse';
 import DanielWiskunde from './DanielWiskunde';
+import DanielBiologie2 from './DanielBiologie2';
 
 const tabBar = `
   .tab-bar {
@@ -34,7 +35,7 @@ const tabBar = `
 
 export default function App() {
   const isHost = new URLSearchParams(window.location.search).get('host') === '1';
-  const [tab, setTab] = useState<'bio' | 'french' | 'wiskunde'>('bio');
+  const [tab, setTab] = useState<'bio' | 'french' | 'wiskunde' | 'bio2'>('bio');
 
   return (
     <>
@@ -49,10 +50,14 @@ export default function App() {
         <button className={`tab-btn${tab === 'wiskunde' ? ' active' : ''}`} onClick={() => setTab('wiskunde')}>
           📐 Wiskunde
         </button>
+        <button className={`tab-btn${tab === 'bio2' ? ' active' : ''}`} onClick={() => setTab('bio2')}>
+          🧬 Bio H4
+        </button>
       </div>
       {tab === 'bio' && (isHost ? <Host /> : <Play />)}
       {tab === 'french' && <DanielFranse />}
       {tab === 'wiskunde' && <DanielWiskunde isHost={isHost} />}
+      {tab === 'bio2' && <DanielBiologie2 isHost={isHost} />}
     </>
   );
 }
