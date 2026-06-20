@@ -226,6 +226,51 @@ const css = `
     color: ${C.text}; vertical-align: top;
   }
   .b2-host-table tr:last-child td { border-bottom: none; }
+
+  /* ── Question type filter ─────────────────────────────────────────── */
+  .b2-type-filter {
+    display: flex; gap: 6px; justify-content: center; margin: 14px 0 4px; flex-wrap: wrap;
+  }
+  .b2-type-btn {
+    padding: 7px 16px; border: 1.5px solid ${C.border}; border-radius: 20px;
+    background: none; color: ${C.textDim}; font-size: 13px; font-weight: 600;
+    cursor: pointer; font-family: 'DM Sans'; transition: all .15s;
+  }
+  .b2-type-btn.active { background: ${C.accent}; border-color: ${C.accent}; color: #fff; }
+
+  /* ── Open question input ──────────────────────────────────────────── */
+  .b2-open-input {
+    width: 100%; background: rgba(255,255,255,.04); border: 1.5px solid ${C.border};
+    border-radius: 12px; padding: 14px 16px; color: ${C.textBright}; font-size: 15px;
+    font-family: 'DM Sans'; resize: vertical; min-height: 80px; margin-top: 14px;
+    outline: none; transition: border-color .15s; line-height: 1.5;
+  }
+  .b2-open-input:focus { border-color: ${C.accent}; }
+  .b2-open-input::placeholder { color: ${C.textDim}; }
+
+  /* ── Answer comparison ────────────────────────────────────────────── */
+  .b2-answer-compare {
+    margin-top: 14px; padding: 16px; border-radius: 12px;
+    background: rgba(255,255,255,.04); border: 1px solid ${C.border};
+  }
+  .b2-ac-label {
+    font-size: 11px; font-weight: 700; color: ${C.textDim};
+    letter-spacing: .5px; text-transform: uppercase; margin-bottom: 4px;
+  }
+  .b2-ac-val { font-size: 14px; color: ${C.textBright}; line-height: 1.55; font-weight: 500; }
+  .b2-ac-correct { color: ${C.green}; }
+  .b2-ac-expl { font-size: 13px; color: ${C.textDim}; margin-top: 10px; line-height: 1.55; }
+
+  /* ── Self-evaluation buttons ──────────────────────────────────────── */
+  .b2-self-eval { display: flex; gap: 8px; margin-top: 12px; }
+  .b2-se-knew, .b2-se-didnt {
+    flex: 1; padding: 14px; border-radius: 12px;
+    font-size: 14px; font-weight: 700; cursor: pointer; font-family: 'DM Sans'; transition: all .15s;
+  }
+  .b2-se-knew { background: ${C.greenGlow}; color: ${C.green}; border: 1.5px solid ${C.green}; }
+  .b2-se-knew:hover { background: rgba(34,197,94,.35); }
+  .b2-se-didnt { background: ${C.redGlow}; color: ${C.red}; border: 1.5px solid ${C.red}; }
+  .b2-se-didnt:hover { background: rgba(239,68,68,.35); }
 `;
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
@@ -399,13 +444,26 @@ function Bio2Quiz({
   tabLabel: string;
   onWrongAnswer: () => void;
 }) {
-  const pool = BIO2_QUESTIONS.filter(q => q.sub_topic === subTopic);
+  const allPool = BIO2_QUESTIONS.filter(q => q.sub_topic === subTopic);
+  const [typeFilter, setTypeFilter] = useState<'all' | 'mc' | 'open'>('all');
+
+  const hasMC = allPool.some(q => !q.type || q.type === 'multiple_choice');
+  const hasOpen = allPool.some(q => q.type === 'open');
+
+  const pool = typeFilter === 'mc'
+    ? allPool.filter(q => !q.type || q.type === 'multiple_choice')
+    : typeFilter === 'open'
+    ? allPool.filter(q => q.type === 'open')
+    : allPool;
+
   const [questions, setQuestions] = useState<Bio2Question[]>([]);
   const [qi, setQi] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
   const [score, setScore] = useState({ correct: 0, wrong: 0 });
   const [started, setStarted] = useState(false);
+  const [openAnswer, setOpenAnswer] = useState('');
+  const [openChecked, setOpenChecked] = useState(false);
 
   const startQuiz = () => {
     setQuestions(shuffle(pool));
@@ -413,6 +471,8 @@ function Bio2Quiz({
     setSelected(null);
     setFeedback(null);
     setScore({ correct: 0, wrong: 0 });
+    setOpenAnswer('');
+    setOpenChecked(false);
     setStarted(true);
   };
 
@@ -421,6 +481,19 @@ function Bio2Quiz({
       <div className="b2-start-card">
         <div className="icon">🦴</div>
         <h2>{tabLabel}</h2>
+        {hasMC && hasOpen && (
+          <div className="b2-type-filter">
+            {(['all', 'mc', 'open'] as const).map(f => (
+              <button
+                key={f}
+                className={`b2-type-btn${typeFilter === f ? ' active' : ''}`}
+                onClick={() => setTypeFilter(f)}
+              >
+                {f === 'all' ? 'Alles' : f === 'mc' ? 'MC' : 'Open vragen'}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="sub">{pool.length} vragen</div>
         <button className="b2-next" style={{ marginTop: 20 }} onClick={startQuiz}>
           Start quiz →
@@ -455,6 +528,7 @@ function Bio2Quiz({
   }
 
   const cur = questions[qi];
+  const isOpen = cur.type === 'open';
 
   const handleAnswer = async (opt: string) => {
     if (feedback) return;
@@ -469,10 +543,26 @@ function Bio2Quiz({
     }
   };
 
+  const handleOpenCheck = () => {
+    if (openAnswer.trim()) setOpenChecked(true);
+  };
+
+  const handleSelfEval = async (knew: boolean) => {
+    setFeedback(knew ? 'correct' : 'wrong');
+    setScore(s => knew ? { ...s, correct: s.correct + 1 } : { ...s, wrong: s.wrong + 1 });
+    await saveAttempt(cur, openAnswer, knew);
+    if (!knew) {
+      await upsertHerhaling(cur);
+      onWrongAnswer();
+    }
+  };
+
   const next = () => {
     setQi(qi + 1);
     setSelected(null);
     setFeedback(null);
+    setOpenAnswer('');
+    setOpenChecked(false);
   };
 
   return (
@@ -494,33 +584,84 @@ function Bio2Quiz({
         <div className="question-text">{cur.prompt}</div>
       </div>
 
-      <div className="b2-choices">
-        {cur.options.map(opt => {
-          let cls = 'b2-choice';
-          if (feedback) {
-            cls += ' locked';
-            if (opt === cur.correct_answer) cls += ' correct';
-            else if (opt === selected) cls += ' wrong';
-          }
-          return (
-            <button key={opt} className={cls} onClick={() => handleAnswer(opt)}>
-              {opt}
+      {isOpen ? (
+        <>
+          {!openChecked && (
+            <>
+              <textarea
+                className="b2-open-input"
+                value={openAnswer}
+                onChange={e => setOpenAnswer(e.target.value)}
+                placeholder="Typ je antwoord hier..."
+              />
+              <button
+                className="b2-next"
+                style={{ marginTop: 12 }}
+                onClick={handleOpenCheck}
+                disabled={!openAnswer.trim()}
+              >
+                Check →
+              </button>
+            </>
+          )}
+          {openChecked && !feedback && (
+            <>
+              <div className="b2-answer-compare">
+                <div className="b2-ac-label">Jouw antwoord</div>
+                <div className="b2-ac-val">{openAnswer || '—'}</div>
+                <div className="b2-ac-label" style={{ marginTop: 10 }}>Correct antwoord</div>
+                <div className="b2-ac-val b2-ac-correct">{cur.correct_answer}</div>
+                {cur.explanation && <div className="b2-ac-expl">{cur.explanation}</div>}
+              </div>
+              <div className="b2-self-eval">
+                <button className="b2-se-knew" onClick={() => handleSelfEval(true)}>✅ Wist ik</button>
+                <button className="b2-se-didnt" onClick={() => handleSelfEval(false)}>❌ Wist ik niet</button>
+              </div>
+            </>
+          )}
+          {feedback && (
+            <>
+              <div className={`b2-feedback ${feedback}`}>
+                {feedback === 'correct' ? '✅ Goed bijgehouden!' : '❌ Toegevoegd aan herhaling'}
+                <div className="explanation">{cur.explanation}</div>
+              </div>
+              <button className="b2-next" onClick={next}>
+                {qi + 1 < questions.length ? 'Volgende →' : 'Resultaat bekijken'}
+              </button>
+            </>
+          )}
+        </>
+      ) : (
+        <>
+          <div className="b2-choices">
+            {(cur.options ?? []).map(opt => {
+              let cls = 'b2-choice';
+              if (feedback) {
+                cls += ' locked';
+                if (opt === cur.correct_answer) cls += ' correct';
+                else if (opt === selected) cls += ' wrong';
+              }
+              return (
+                <button key={opt} className={cls} onClick={() => handleAnswer(opt)}>
+                  {opt}
+                </button>
+              );
+            })}
+          </div>
+
+          {feedback && (
+            <div className={`b2-feedback ${feedback}`}>
+              {feedback === 'correct' ? '✅ Goed!' : `❌ Fout! Jouw antwoord: ${selected}`}
+              <div className="explanation">{cur.explanation}</div>
+            </div>
+          )}
+
+          {feedback && (
+            <button className="b2-next" onClick={next}>
+              {qi + 1 < questions.length ? 'Volgende →' : 'Resultaat bekijken'}
             </button>
-          );
-        })}
-      </div>
-
-      {feedback && (
-        <div className={`b2-feedback ${feedback}`}>
-          {feedback === 'correct' ? '✅ Goed!' : `❌ Fout! Jouw antwoord: ${selected}`}
-          <div className="explanation">{cur.explanation}</div>
-        </div>
-      )}
-
-      {feedback && (
-        <button className="b2-next" onClick={next}>
-          {qi + 1 < questions.length ? 'Volgende →' : 'Resultaat bekijken'}
-        </button>
+          )}
+        </>
       )}
     </>
   );
@@ -638,6 +779,8 @@ function HerhalingSession({
   const [selected, setSelected] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
   const [lastStatus, setLastStatus] = useState<'continued' | 'graduated' | null>(null);
+  const [openAnswer, setOpenAnswer] = useState('');
+  const [openChecked, setOpenChecked] = useState(false);
 
   const active = initialRows.filter(r => !graduated.has(r.question_id));
 
@@ -672,7 +815,8 @@ function HerhalingSession({
     return null;
   }
 
-  const options = curQ?.options ?? [];
+  const isOpen = curQ?.type === 'open';
+  const options = !isOpen ? (curQ?.options ?? []) : [];
 
   const handleAnswer = async (opt: string) => {
     if (feedback) return;
@@ -698,10 +842,37 @@ function HerhalingSession({
     }
   };
 
+  const handleOpenCheck = () => {
+    if (openAnswer.trim()) setOpenChecked(true);
+  };
+
+  const handleOpenSelfEval = async (knew: boolean) => {
+    setFeedback(knew ? 'correct' : 'wrong');
+    if (curQ) await saveAttempt(curQ, openAnswer, knew);
+
+    if (knew) {
+      const status = await progressHerhaling(curRow.question_id);
+      setLastStatus(status);
+      if (status === 'graduated') {
+        setGraduated(prev => new Set([...prev, curRow.question_id]));
+        fireConfetti();
+        onBadgeChange();
+      } else {
+        setLocalCounts(prev => ({ ...prev, [curRow.question_id]: (prev[curRow.question_id] ?? 0) + 1 }));
+      }
+    } else {
+      setLastStatus('continued');
+      setLocalCounts(prev => ({ ...prev, [curRow.question_id]: 0 }));
+      if (curQ) await upsertHerhaling(curQ);
+    }
+  };
+
   const next = () => {
     setSelected(null);
     setFeedback(null);
     setLastStatus(null);
+    setOpenAnswer('');
+    setOpenChecked(false);
     const nextQi = findNextQi(effectiveQi + 1);
     if (nextQi >= queue.length) {
       const remaining = initialRows.filter(r => !graduated.has(r.question_id));
@@ -736,34 +907,83 @@ function HerhalingSession({
         <div className="question-text">{curRow.question_text}</div>
       </div>
 
-      {options.length > 0 && (
-        <div className="b2-choices">
-          {options.map(opt => {
-            const correctAns = curQ?.correct_answer ?? curRow.correct_answer;
-            let cls = 'b2-choice';
-            if (feedback) {
-              cls += ' locked';
-              if (opt === correctAns) cls += ' correct';
-              else if (opt === selected) cls += ' wrong';
-            }
-            return (
-              <button key={opt} className={cls} onClick={() => handleAnswer(opt)}>
-                {opt}
+      {isOpen ? (
+        <>
+          {!openChecked && !feedback && (
+            <>
+              <textarea
+                className="b2-open-input"
+                value={openAnswer}
+                onChange={e => setOpenAnswer(e.target.value)}
+                placeholder="Typ je antwoord hier..."
+              />
+              <button
+                className="b2-next"
+                style={{ marginTop: 12 }}
+                onClick={handleOpenCheck}
+                disabled={!openAnswer.trim()}
+              >
+                Check →
               </button>
-            );
-          })}
-        </div>
-      )}
-
-      {feedback && (
-        <div className={`b2-feedback ${feedback}`}>
-          {feedback === 'correct' && lastStatus === 'graduated'
-            ? '🎉 Goed gedaan! Verwijderd uit herhaling!'
-            : feedback === 'correct'
-            ? '✅ Nog 1x goed voor verwijdering'
-            : `❌ Fout! Antwoord: ${curRow.correct_answer}`}
-          {curQ?.explanation && <div className="explanation">{curQ.explanation}</div>}
-        </div>
+            </>
+          )}
+          {openChecked && !feedback && (
+            <>
+              <div className="b2-answer-compare">
+                <div className="b2-ac-label">Jouw antwoord</div>
+                <div className="b2-ac-val">{openAnswer || '—'}</div>
+                <div className="b2-ac-label" style={{ marginTop: 10 }}>Correct antwoord</div>
+                <div className="b2-ac-val b2-ac-correct">{curRow.correct_answer}</div>
+                {curQ?.explanation && <div className="b2-ac-expl">{curQ.explanation}</div>}
+              </div>
+              <div className="b2-self-eval">
+                <button className="b2-se-knew" onClick={() => handleOpenSelfEval(true)}>✅ Wist ik</button>
+                <button className="b2-se-didnt" onClick={() => handleOpenSelfEval(false)}>❌ Wist ik niet</button>
+              </div>
+            </>
+          )}
+          {feedback && (
+            <div className={`b2-feedback ${feedback}`}>
+              {feedback === 'correct' && lastStatus === 'graduated'
+                ? '🎉 Goed gedaan! Verwijderd uit herhaling!'
+                : feedback === 'correct'
+                ? '✅ Nog 1x goed voor verwijdering'
+                : '❌ Toegevoegd aan herhaling'}
+              {curQ?.explanation && <div className="explanation">{curQ.explanation}</div>}
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          {options.length > 0 && (
+            <div className="b2-choices">
+              {options.map(opt => {
+                const correctAns = curQ?.correct_answer ?? curRow.correct_answer;
+                let cls = 'b2-choice';
+                if (feedback) {
+                  cls += ' locked';
+                  if (opt === correctAns) cls += ' correct';
+                  else if (opt === selected) cls += ' wrong';
+                }
+                return (
+                  <button key={opt} className={cls} onClick={() => handleAnswer(opt)}>
+                    {opt}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {feedback && (
+            <div className={`b2-feedback ${feedback}`}>
+              {feedback === 'correct' && lastStatus === 'graduated'
+                ? '🎉 Goed gedaan! Verwijderd uit herhaling!'
+                : feedback === 'correct'
+                ? '✅ Nog 1x goed voor verwijdering'
+                : `❌ Fout! Antwoord: ${curRow.correct_answer}`}
+              {curQ?.explanation && <div className="explanation">{curQ.explanation}</div>}
+            </div>
+          )}
+        </>
       )}
 
       {feedback && (
