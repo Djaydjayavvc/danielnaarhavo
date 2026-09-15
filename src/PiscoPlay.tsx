@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { subjects, type Question } from './questions';
 
-type PiscoQuestion = Question & { specialty: string };
+type PiscoQuestion = Question & { specialty: string; correctStreak?: number };
 type Mode = 'mc' | 'open' | 'mistakes';
 type Screen = 'home' | 'quiz' | 'result';
+type ProgressState = { mc: string[]; open: string[] };
 
 const MISTAKES_KEY = 'pisco_mistakes_v1';
+const PROGRESS_KEY = 'pisco_progress_v1';
+const MASTERY_STREAK = 2;
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -61,6 +64,28 @@ function saveMistakes(list: PiscoQuestion[]) {
   }
 }
 
+function loadProgress(): ProgressState {
+  try {
+    const raw = localStorage.getItem(PROGRESS_KEY);
+    if (!raw) return { mc: [], open: [] };
+    const parsed = JSON.parse(raw);
+    return {
+      mc: Array.isArray(parsed.mc) ? parsed.mc : [],
+      open: Array.isArray(parsed.open) ? parsed.open : [],
+    };
+  } catch {
+    return { mc: [], open: [] };
+  }
+}
+
+function saveProgress(p: ProgressState) {
+  try {
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify(p));
+  } catch {
+    // ignore
+  }
+}
+
 function getAllPiscoQuestions(): PiscoQuestion[] {
   return subjects
     .filter((s) => s.id.startsWith('pisco-'))
@@ -70,9 +95,28 @@ function getAllPiscoQuestions(): PiscoQuestion[] {
     });
 }
 
+function upsertMistakeOnWrong(list: PiscoQuestion[], q: PiscoQuestion): PiscoQuestion[] {
+  const idx = list.findIndex((m) => m.prompt === q.prompt);
+  if (idx === -1) return [...list, { ...q, correctStreak: 0 }];
+  const next = [...list];
+  next[idx] = { ...next[idx], correctStreak: 0 };
+  return next;
+}
+
+function bumpMistakeOnCorrect(list: PiscoQuestion[], q: PiscoQuestion): PiscoQuestion[] {
+  const idx = list.findIndex((m) => m.prompt === q.prompt);
+  if (idx === -1) return list;
+  const streak = (list[idx].correctStreak ?? 0) + 1;
+  if (streak >= MASTERY_STREAK) return list.filter((_, i) => i !== idx);
+  const next = [...list];
+  next[idx] = { ...next[idx], correctStreak: streak };
+  return next;
+}
+
 export function PiscoPlay({ onSwitchProfile }: { onSwitchProfile: () => void }) {
   const [allQuestions] = useState<PiscoQuestion[]>(() => getAllPiscoQuestions());
   const [mistakes, setMistakes] = useState<PiscoQuestion[]>(() => loadMistakes());
+  const [progress, setProgress] = useState<ProgressState>(() => loadProgress());
   const [screen, setScreen] = useState<Screen>('home');
   const [mode, setMode] = useState<Mode>('mc');
   const [pool, setPool] = useState<PiscoQuestion[]>([]);
@@ -88,17 +132,34 @@ export function PiscoPlay({ onSwitchProfile }: { onSwitchProfile: () => void }) 
   }, [mistakes]);
 
   useEffect(() => {
+    saveProgress(progress);
+  }, [progress]);
+
+  useEffect(() => {
     if (screen === 'quiz' && !feedback) inputRef.current?.focus();
   }, [qi, screen, feedback]);
 
-  const mcCount = allQuestions.filter((q) => !!q.options).length;
-  const openCount = allQuestions.filter((q) => !q.options).length;
+  const mcAll = allQuestions.filter((q) => !!q.options);
+  const openAll = allQuestions.filter((q) => !q.options);
+  const mcSeenSet = new Set(progress.mc);
+  const openSeenSet = new Set(progress.open);
+  const mcSeenCount = mcAll.filter((q) => mcSeenSet.has(q.prompt)).length;
+  const openSeenCount = openAll.filter((q) => openSeenSet.has(q.prompt)).length;
 
   const start = (m: Mode) => {
     let p: PiscoQuestion[];
-    if (m === 'mc') p = shuffle(allQuestions.filter((q) => !!q.options));
-    else if (m === 'open') p = shuffle(allQuestions.filter((q) => !q.options));
-    else p = shuffle(mistakes);
+    if (m === 'mistakes') {
+      p = shuffle(mistakes);
+    } else {
+      const source = m === 'mc' ? mcAll : openAll;
+      const seen = new Set(progress[m]);
+      let unseen = source.filter((q) => !seen.has(q.prompt));
+      if (unseen.length === 0) {
+        setProgress((prev) => ({ ...prev, [m]: [] }));
+        unseen = source;
+      }
+      p = shuffle(unseen);
+    }
     setMode(m);
     setPool(p);
     setQi(0);
@@ -111,19 +172,20 @@ export function PiscoPlay({ onSwitchProfile }: { onSwitchProfile: () => void }) 
 
   const cur = pool[qi];
 
-  const addMistake = (q: PiscoQuestion) => {
-    setMistakes((prev) => (prev.some((m) => m.prompt === q.prompt) ? prev : [...prev, q]));
-  };
-
-  const removeMistake = (q: PiscoQuestion) => {
-    setMistakes((prev) => (prev.some((m) => m.prompt === q.prompt) ? prev.filter((m) => m.prompt !== q.prompt) : prev));
+  const markSeen = (m: 'mc' | 'open', prompt: string) => {
+    setProgress((prev) => (prev[m].includes(prompt) ? prev : { ...prev, [m]: [...prev[m], prompt] }));
   };
 
   const registerResult = (ok: boolean) => {
     setFeedback(ok ? 'correct' : 'wrong');
     setScore((s) => (ok ? { ...s, correct: s.correct + 1 } : { ...s, wrong: s.wrong + 1 }));
-    if (ok && mode === 'mistakes') removeMistake(cur);
-    if (!ok) addMistake(cur);
+
+    if (mode === 'mistakes') {
+      setMistakes((prev) => (ok ? bumpMistakeOnCorrect(prev, cur) : upsertMistakeOnWrong(prev, cur)));
+    } else {
+      markSeen(mode, cur.prompt);
+      if (!ok) setMistakes((prev) => upsertMistakeOnWrong(prev, cur));
+    }
   };
 
   const handleMC = (optionText: string) => {
@@ -150,6 +212,8 @@ export function PiscoPlay({ onSwitchProfile }: { onSwitchProfile: () => void }) 
   };
 
   if (screen === 'home') {
+    const mcRemaining = mcAll.length - mcSeenCount;
+    const openRemaining = openAll.length - openSeenCount;
     return (
       <div style={S.page}>
         <style>{kf}</style>
@@ -157,17 +221,23 @@ export function PiscoPlay({ onSwitchProfile }: { onSwitchProfile: () => void }) 
           <div style={S.header}>
             <div style={S.badge}>💊 PISCO MODE</div>
             <h1 style={S.h1}>Medical Terminology</h1>
-            <p style={S.sub}>Handbook for Interpreters — Engels → Spaans</p>
+            <p style={S.sub}>Handbook for Interpreters — English → Spanish</p>
           </div>
 
           <button style={{ ...S.modeBtn, background: 'linear-gradient(135deg, #0891b2, #0e7490)' }} onClick={() => start('mc')}>
             <div style={S.modeTitle}>🔤 Multiple Choice</div>
-            <div style={S.modeSub}>{mcCount} vragen, gemixt uit alle specialismen</div>
+            <div style={S.modeSub}>{mcAll.length} questions, mixed from all specialties</div>
+            {mcSeenCount > 0 && (
+              <div style={S.modeProgress}>{mcSeenCount}/{mcAll.length} done — {mcRemaining} left</div>
+            )}
           </button>
 
           <button style={{ ...S.modeBtn, background: 'linear-gradient(135deg, #0d9488, #0f766e)' }} onClick={() => start('open')}>
-            <div style={S.modeTitle}>✍️ Open Vragen</div>
-            <div style={S.modeSub}>{openCount} vragen, typ de vertaling</div>
+            <div style={S.modeTitle}>✍️ Open Questions</div>
+            <div style={S.modeSub}>{openAll.length} questions, type the translation</div>
+            {openSeenCount > 0 && (
+              <div style={S.modeProgress}>{openSeenCount}/{openAll.length} done — {openRemaining} left</div>
+            )}
           </button>
 
           <button
@@ -179,13 +249,15 @@ export function PiscoPlay({ onSwitchProfile }: { onSwitchProfile: () => void }) 
             onClick={() => mistakes.length > 0 && start('mistakes')}
             disabled={mistakes.length === 0}
           >
-            <div style={S.modeTitle}>🔁 Foutenbox</div>
+            <div style={S.modeTitle}>🔁 Mistakes Box</div>
             <div style={S.modeSub}>
-              {mistakes.length === 0 ? 'Nog geen fouten opgeslagen' : `${mistakes.length} vraag${mistakes.length === 1 ? '' : 'en'} om te oefenen`}
+              {mistakes.length === 0
+                ? 'No mistakes saved yet'
+                : `${mistakes.length} question${mistakes.length === 1 ? '' : 's'} to practice — need ${MASTERY_STREAK} correct in a row to clear`}
             </div>
           </button>
 
-          <button style={S.switchBtn} onClick={onSwitchProfile}>↺ Wissel profiel</button>
+          <button style={S.switchBtn} onClick={onSwitchProfile}>↺ Switch profile</button>
         </div>
       </div>
     );
@@ -194,20 +266,26 @@ export function PiscoPlay({ onSwitchProfile }: { onSwitchProfile: () => void }) 
   if (screen === 'result') {
     const total = score.correct + score.wrong;
     const pct = total > 0 ? Math.round((score.correct / total) * 100) : 0;
-    const modeLabel = mode === 'mc' ? 'Multiple Choice' : mode === 'open' ? 'Open Vragen' : 'Foutenbox';
+    const modeLabel = mode === 'mc' ? 'Multiple Choice' : mode === 'open' ? 'Open Questions' : 'Mistakes Box';
+    const cycleComplete =
+      (mode === 'mc' && mcAll.length > 0 && mcSeenCount === mcAll.length) ||
+      (mode === 'open' && openAll.length > 0 && openSeenCount === openAll.length);
     return (
       <div style={S.page}>
         <style>{kf}</style>
         <div style={S.container}>
           <div style={S.resultCard}>
             <div style={S.resultEmoji}>{pct >= 80 ? '🎉' : pct >= 55 ? '💪' : '📚'}</div>
-            <h2 style={S.resultH2}>{modeLabel} klaar!</h2>
+            <h2 style={S.resultH2}>{modeLabel} done!</h2>
             <div style={S.resultScore}>{pct}%</div>
-            <div style={S.resultDetail}>{score.correct} / {total} goed</div>
-            {mistakes.length > 0 && (
-              <div style={S.resultMistakeNote}>📌 {mistakes.length} vraag{mistakes.length === 1 ? '' : 'en'} staan in je foutenbox</div>
+            <div style={S.resultDetail}>{score.correct} / {total} correct</div>
+            {cycleComplete && (
+              <div style={S.completeNote}>🎉 You've answered every {modeLabel.toLowerCase()} question! Next round starts fresh.</div>
             )}
-            <button style={S.nextBtn} onClick={() => setScreen('home')}>← Terug naar Pisco menu</button>
+            {mistakes.length > 0 && (
+              <div style={S.resultMistakeNote}>📌 {mistakes.length} question{mistakes.length === 1 ? '' : 's'} in your mistakes box</div>
+            )}
+            <button style={S.nextBtn} onClick={() => setScreen('home')}>← Back to Pisco menu</button>
           </div>
         </div>
       </div>
@@ -220,8 +298,8 @@ export function PiscoPlay({ onSwitchProfile }: { onSwitchProfile: () => void }) 
         <style>{kf}</style>
         <div style={S.container}>
           <div style={S.resultCard}>
-            <p style={{ color: '#334155' }}>Geen vragen in deze set.</p>
-            <button style={S.nextBtn} onClick={() => setScreen('home')}>← Terug</button>
+            <p style={{ color: '#334155' }}>No questions in this set.</p>
+            <button style={S.nextBtn} onClick={() => setScreen('home')}>← Back</button>
           </div>
         </div>
       </div>
@@ -229,16 +307,16 @@ export function PiscoPlay({ onSwitchProfile }: { onSwitchProfile: () => void }) 
   }
 
   const isMC = !!cur.options;
-  const progress = (qi / pool.length) * 100;
+  const progressPct = (qi / pool.length) * 100;
 
   return (
     <div style={S.page}>
       <style>{kf}</style>
       <div style={S.container}>
         <button style={S.backBtn} onClick={() => setScreen('home')}>← Pisco menu</button>
-        <div style={S.progressBar}><div style={{ ...S.progressFill, width: `${progress}%` }} /></div>
+        <div style={S.progressBar}><div style={{ ...S.progressFill, width: `${progressPct}%` }} /></div>
         <div style={S.scoreRow}>
-          <span>Vraag {qi + 1} / {pool.length}</span>
+          <span>Question {qi + 1} / {pool.length}</span>
           <span><span style={S.correctText}>✓ {score.correct}</span> · <span style={S.wrongText}>✗ {score.wrong}</span></span>
         </div>
 
@@ -273,7 +351,7 @@ export function PiscoPlay({ onSwitchProfile }: { onSwitchProfile: () => void }) 
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && input.trim() && checkOpen()}
-                placeholder="Typ de Spaanse vertaling..."
+                placeholder="Type the Spanish translation..."
               />
               <button style={S.submitBtn} disabled={!input.trim()} onClick={checkOpen}>Check</button>
             </div>
@@ -283,17 +361,17 @@ export function PiscoPlay({ onSwitchProfile }: { onSwitchProfile: () => void }) 
         {feedback && (
           <>
             <div style={{ ...S.feedback, ...(feedback === 'correct' ? S.feedbackCorrect : S.feedbackWrong) }}>
-              {feedback === 'correct' ? '✓ Goed!' : (
+              {feedback === 'correct' ? '✓ Correct!' : (
                 <>
-                  ✗ Fout!
+                  ✗ Wrong!
                   <div style={S.answerLine}>
-                    Antwoord: {isMC ? cur.options!.find((o) => o.split('.')[0].trim() === cur.answer) : cur.answer}
+                    Answer: {isMC ? cur.options!.find((o) => o.split('.')[0].trim() === cur.answer) : cur.answer}
                   </div>
                 </>
               )}
             </div>
             <div style={S.explanation}>{cur.explanation}</div>
-            <button style={S.nextBtn} onClick={next}>Volgende →</button>
+            <button style={S.nextBtn} onClick={next}>Next →</button>
           </>
         )}
       </div>
@@ -317,6 +395,7 @@ const S: Record<string, React.CSSProperties> = {
   modeBtn: { display: 'block', width: '100%', border: 'none', borderRadius: 18, padding: '20px 22px', marginBottom: 14, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', animation: 'pop 0.3s ease-out', boxShadow: '0 10px 26px rgba(0,0,0,0.25)' },
   modeTitle: { fontSize: 19, fontWeight: 800, color: 'white' },
   modeSub: { fontSize: 13, color: 'rgba(255,255,255,0.85)', marginTop: 4 },
+  modeProgress: { fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 6, fontWeight: 700 },
   switchBtn: { display: 'block', width: '100%', background: 'none', border: '1.5px solid rgba(255,255,255,0.15)', borderRadius: 12, padding: '10px', color: '#94a3b8', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', marginTop: 8 },
   backBtn: { background: 'none', border: 'none', color: '#7dd3fc', fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: '8px 0', marginBottom: 10, fontFamily: 'inherit' },
   progressBar: { height: 8, background: 'rgba(255,255,255,0.08)', borderRadius: 4, overflow: 'hidden', marginBottom: 8 },
@@ -345,5 +424,6 @@ const S: Record<string, React.CSSProperties> = {
   resultH2: { fontSize: 22, fontWeight: 800, color: '#1e293b', margin: 0 },
   resultScore: { fontSize: 40, fontWeight: 900, color: '#0891b2', margin: '12px 0 4px' },
   resultDetail: { fontSize: 14, color: '#64748b' },
+  completeNote: { marginTop: 14, fontSize: 13, color: '#0e7490', background: '#ecfeff', border: '1px solid #a5f3fc', borderRadius: 10, padding: '10px 12px', fontWeight: 600 },
   resultMistakeNote: { marginTop: 14, fontSize: 13, color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '8px 12px' },
 };
