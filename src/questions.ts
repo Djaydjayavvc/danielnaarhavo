@@ -254,5 +254,311 @@ export const subjects: Subject[] = [
         explanation: "Dit is precies wat Darwin zag bij de Galápagos-vinken: verschillend voedsel → verschillende selectiedruk → verschillende snavels → mogelijk nieuwe soorten. Combineert natuurlijke selectie (3.3) met soortvorming (3.6)."
       }
     ]
-  }
+  },
+
+  // ═══════════════════════ PISCO — Medical Terminology (EN → ES) ═══════════════════════
+
+  {
+    id: "pisco-emergency",
+    title: "🚨 Pisco — Emergency & Vitals",
+    questions: [
+      {
+        prompt: "What is the Spanish translation of 'Heart Attack (Myocardial Infarction)'?",
+        options: ["A. Infarto al Miocardio", "B. Derrame Cerebral", "C. Paro Cardíaco", "D. Angina de Pecho"],
+        answer: "A",
+        explanation: "Heart Attack = Infarto al Miocardio (or Ataque Cardíaco). Myocardial refers to the heart muscle (miocardio).",
+      },
+      {
+        prompt: "What is the Spanish for 'Shortness of Breath'?",
+        options: ["A. Dolor de Pecho", "B. Dificultad para Respirar / Falta de Aire", "C. Mareo", "D. Fatiga"],
+        answer: "B",
+        explanation: "Shortness of Breath = Dificultad para Respirar or Falta de Aire. Also called Disnea in clinical contexts.",
+      },
+      {
+        prompt: "What does 'Triaje' mean in English?",
+        options: ["A. Trauma", "B. Transfer", "C. Triage", "D. Treatment"],
+        answer: "C",
+        explanation: "Triaje = Triage — the process of sorting patients by urgency of care.",
+      },
+      {
+        prompt: "Translate: 'Seizure'",
+        answer: "Convulsión",
+        explanation: "A seizure (convulsión) is a sudden burst of uncontrolled electrical activity in the brain.",
+      },
+      {
+        prompt: "What is 'Vital Signs' in Spanish?",
+        options: ["A. Señales de Vida", "B. Signos Vitales", "C. Síntomas Críticos", "D. Indicadores Médicos"],
+        answer: "B",
+        explanation: "Vital Signs = Signos Vitales. These include blood pressure, pulse, temperature, and respiratory rate.",
+      },
+      {
+        prompt: "Translate: 'CPR (Cardiopulmonary Resuscitation)'",
+        answer: "RCP (Reanimación Cardiopulmonar)",
+        explanation: "CPR = RCP. Cardio = corazón, Pulmonary = pulmonar, Resuscitation = Reanimación.",
+      },
+      {
+        prompt: "What is the Spanish for 'Stroke (Cerebrovascular Accident)'?",
+        options: ["A. Convulsión", "B. Derrame Cerebral (Accidente Cerebrovascular)", "C. Amnesia", "D. Infarto al Miocardio"],
+        answer: "B",
+        explanation: "Stroke = Derrame Cerebral or Accidente Cerebrovascular (ACV). It occurs when blood supply to the brain is disrupted.",
+      },
+      {
+        prompt: "Translate: 'Blood Pressure'",
+        answer: "Presión Arterial",
+        explanation: "Blood Pressure = Presión Arterial. High blood pressure = Presión Arterial Alta / Hipertensión.",
+      },
+    ],
+  },
+
+  {
+    id: "pisco-primary-surgery",
+    title: "🩺 Pisco — Primary Care & Surgery",
+    questions: [
+      {
+        prompt: "What is 'Prescription' in Spanish?",
+        options: ["A. Receta Médica / Prescripción", "B. Medicamento", "C. Diagnóstico", "D. Tratamiento"],
+        answer: "A",
+        explanation: "Prescription = Receta Médica or Prescripción. A doctor writes a receta for medication.",
+      },
+      {
+        prompt: "Translate: 'Side Effect'",
+        answer: "Efecto Secundario",
+        explanation: "Side Effect = Efecto Secundario. Common when discussing medication reactions.",
+      },
+      {
+        prompt: "What does 'Consentimiento General' mean in English?",
+        options: ["A. Informed Consent", "B. General Consent", "C. Treatment Consent", "D. Advance Directive"],
+        answer: "B",
+        explanation: "General Consent = Consentimiento General — signed on admission for routine care.",
+      },
+      {
+        prompt: "What is 'Biopsy' in Spanish?",
+        options: ["A. Cirugía", "B. Biopsia", "C. Muestra", "D. Prueba Diagnóstica"],
+        answer: "B",
+        explanation: "Biopsy = Biopsia — the removal of tissue for laboratory examination.",
+      },
+      {
+        prompt: "Translate: 'Stitches / Sutures'",
+        answer: "Puntos / Suturas",
+        explanation: "Stitches = Puntos or Suturas. Used to close wounds after surgery or injury.",
+      },
+      {
+        prompt: "What is 'Recovery Room' in Spanish?",
+        options: ["A. Sala de Emergencias", "B. UCI", "C. Sala de Recuperación", "D. Quirófano"],
+        answer: "C",
+        explanation: "Recovery Room = Sala de Recuperación — where patients wake up after surgery.",
+      },
+      {
+        prompt: "Translate: 'NPO (Nothing by Mouth)'",
+        answer: "Nada por Boca (NPO)",
+        explanation: "NPO = Nada por Boca — the patient must not eat or drink before a procedure.",
+      },
+      {
+        prompt: "What is 'Anesthesia' in Spanish?",
+        options: ["A. Sedación", "B. Anestesia", "C. Medicación", "D. Relajante"],
+        answer: "B",
+        explanation: "Anesthesia = Anestesia. General Anesthesia = Anestesia General; Local = Anestesia Local.",
+      },
+    ],
+  },
+
+  {
+    id: "pisco-cardio-pulm",
+    title: "❤️ Pisco — Cardiology & Pulmonology",
+    questions: [
+      {
+        prompt: "What is 'Arrhythmia' in Spanish?",
+        options: ["A. Angina", "B. Taquicardia", "C. Arritmia", "D. Bradicardia"],
+        answer: "C",
+        explanation: "Arrhythmia = Arritmia — an irregular heartbeat. Tachycardia and bradycardia are types of arrhythmias.",
+      },
+      {
+        prompt: "What does 'Insuficiencia Cardíaca' mean in English?",
+        options: ["A. Heart Attack", "B. Heart Murmur", "C. Cardiac Arrest", "D. Heart Failure"],
+        answer: "D",
+        explanation: "Heart Failure = Insuficiencia Cardíaca — the heart cannot pump blood efficiently.",
+      },
+      {
+        prompt: "Translate: 'Pacemaker'",
+        answer: "Marcapasos",
+        explanation: "Pacemaker = Marcapasos — a small device implanted to regulate the heartbeat.",
+      },
+      {
+        prompt: "What is 'Asthma' in Spanish?",
+        options: ["A. Alergia", "B. Bronquitis", "C. Asma", "D. Sinusitis"],
+        answer: "C",
+        explanation: "Asthma = Asma — a chronic respiratory condition causing airway inflammation.",
+      },
+      {
+        prompt: "Translate: 'Inhaler'",
+        answer: "Inhalador",
+        explanation: "Inhaler = Inhalador — a device that delivers medication directly to the lungs.",
+      },
+      {
+        prompt: "What is 'COPD (Chronic Obstructive Pulmonary Disease)' in Spanish?",
+        options: ["A. Asma Crónica", "B. EPOC (Enfermedad Pulmonar Obstructiva Crónica)", "C. Bronquitis Aguda", "D. Neumonía Crónica"],
+        answer: "B",
+        explanation: "COPD = EPOC (Enfermedad Pulmonar Obstructiva Crónica) — a chronic lung disease, often caused by smoking.",
+      },
+      {
+        prompt: "Translate: 'Pneumonia'",
+        answer: "Neumonía",
+        explanation: "Pneumonia = Neumonía — an infection that inflames the air sacs in one or both lungs.",
+      },
+      {
+        prompt: "What does 'Ventilación Mecánica' mean in English?",
+        options: ["A. Oxygen Therapy", "B. Mechanical Ventilation", "C. CPAP", "D. Breathing Exercise"],
+        answer: "B",
+        explanation: "Mechanical Ventilation = Ventilación Mecánica — a machine helps the patient breathe.",
+      },
+    ],
+  },
+
+  {
+    id: "pisco-mental-neuro",
+    title: "🧠 Pisco — Psychiatry & Neurology",
+    questions: [
+      {
+        prompt: "What is 'Anxiety' in Spanish?",
+        options: ["A. Depresión", "B. Ansiedad", "C. Psicosis", "D. Alucinación"],
+        answer: "B",
+        explanation: "Anxiety = Ansiedad — a feeling of worry, nervousness, or unease.",
+      },
+      {
+        prompt: "Translate: 'Hallucinations'",
+        answer: "Alucinaciones",
+        explanation: "Hallucinations = Alucinaciones — perceiving something that isn't there (sound, vision, etc.).",
+      },
+      {
+        prompt: "What does 'Trastorno de Estrés Postraumático' mean in English?",
+        options: ["A. Panic Disorder", "B. OCD", "C. PTSD (Post-Traumatic Stress Disorder)", "D. Bipolar Disorder"],
+        answer: "C",
+        explanation: "PTSD = Trastorno de Estrés Postraumático (TEPT) — triggered by experiencing or witnessing trauma.",
+      },
+      {
+        prompt: "Translate: 'Dementia'",
+        answer: "Demencia",
+        explanation: "Dementia = Demencia — a decline in memory and cognitive function. Alzheimer's is the most common form.",
+      },
+      {
+        prompt: "What is 'Seizure' in Spanish? (neurology context)",
+        options: ["A. Síncope", "B. Convulsión", "C. Vértigo", "D. Espasmo"],
+        answer: "B",
+        explanation: "Seizure = Convulsión — a sudden, uncontrolled electrical disturbance in the brain.",
+      },
+      {
+        prompt: "Translate: 'Cognitive Behavioral Therapy (CBT)'",
+        answer: "Terapia Cognitivo-Conductual (TCC)",
+        explanation: "CBT = TCC (Terapia Cognitivo-Conductual) — a form of psychotherapy addressing thoughts and behaviors.",
+      },
+      {
+        prompt: "What is 'Numbness' in Spanish?",
+        options: ["A. Hormigueo", "B. Entumecimiento", "C. Rigidez", "D. Espasticidad"],
+        answer: "B",
+        explanation: "Numbness = Entumecimiento — loss of sensation, often in limbs.",
+      },
+    ],
+  },
+
+  {
+    id: "pisco-obgyn-peds",
+    title: "👶 Pisco — OB-GYN, Pediatrics & Specialties",
+    questions: [
+      {
+        prompt: "What is 'Miscarriage' in Spanish?",
+        options: ["A. Interrupción del Embarazo", "B. Aborto Espontáneo", "C. Parto Prematuro", "D. Cesárea"],
+        answer: "B",
+        explanation: "Miscarriage = Aborto Espontáneo — the natural loss of a pregnancy before 20 weeks.",
+      },
+      {
+        prompt: "Translate: 'C-section'",
+        answer: "Cesárea",
+        explanation: "C-section = Cesárea — surgical delivery of a baby through the abdomen.",
+      },
+      {
+        prompt: "What is 'Prenatal Vitamins' in Spanish?",
+        options: ["A. Suplementos Diarios", "B. Vitaminas Prenatales", "C. Medicamentos Maternales", "D. Calcio Prenatal"],
+        answer: "B",
+        explanation: "Prenatal Vitamins = Vitaminas Prenatales — supplements taken during pregnancy.",
+      },
+      {
+        prompt: "Translate: 'Contractions' (Labor & Delivery)",
+        answer: "Contracciones",
+        explanation: "Contractions = Contracciones — rhythmic tightening of the uterus during labor.",
+      },
+      {
+        prompt: "What is 'Chemotherapy' in Spanish?",
+        options: ["A. Radioterapia", "B. Quimioterapia", "C. Inmunoterapia", "D. Terapia Dirigida"],
+        answer: "B",
+        explanation: "Chemotherapy = Quimioterapia — drug treatment that uses chemicals to kill cancer cells.",
+      },
+      {
+        prompt: "Translate: 'Fracture'",
+        answer: "Fractura",
+        explanation: "Fracture = Fractura — a break in a bone. Can be partial (fisura) or complete.",
+      },
+      {
+        prompt: "What is 'Osteoporosis' in Spanish?",
+        options: ["A. Artritis", "B. Osteoporosis", "C. Escoliosis", "D. Bursitis"],
+        answer: "B",
+        explanation: "Osteoporosis = Osteoporosis — a condition causing weak, brittle bones due to low bone density.",
+      },
+      {
+        prompt: "Translate: 'Urinary Tract Infection (UTI)'",
+        answer: "Infección del Tracto Urinario (ITU)",
+        explanation: "UTI = ITU (Infección del Tracto Urinario) — infection in any part of the urinary system.",
+      },
+    ],
+  },
+
+  {
+    id: "pisco-mixed",
+    title: "🔬 Pisco — Mixed Specialties",
+    questions: [
+      {
+        prompt: "What is 'Diabetes Mellitus' in Spanish?",
+        options: ["A. Diabetes Mellitus", "B. Hipoglucemia", "C. Hiperglucemia", "D. Insulinemia"],
+        answer: "A",
+        explanation: "Diabetes Mellitus = Diabetes Mellitus — the name is identical in both languages.",
+      },
+      {
+        prompt: "Translate: 'Kidney Failure'",
+        answer: "Insuficiencia Renal",
+        explanation: "Kidney Failure = Insuficiencia Renal — the kidneys lose their ability to filter waste.",
+      },
+      {
+        prompt: "What is 'Melanoma' in Spanish?",
+        options: ["A. Carcinoma", "B. Sarcoma", "C. Melanoma", "D. Psoriasis"],
+        answer: "C",
+        explanation: "Melanoma = Melanoma — a serious type of skin cancer that begins in melanocytes.",
+      },
+      {
+        prompt: "Translate: 'Root Canal'",
+        answer: "Tratamiento de Conducto",
+        explanation: "Root Canal = Tratamiento de Conducto — a dental procedure to treat infection at the root of a tooth.",
+      },
+      {
+        prompt: "What is 'Glaucoma' in Spanish?",
+        options: ["A. Catarata", "B. Miopía", "C. Glaucoma", "D. Retinitis"],
+        answer: "C",
+        explanation: "Glaucoma = Glaucoma — a group of eye conditions that damage the optic nerve, often due to high eye pressure.",
+      },
+      {
+        prompt: "Translate: 'Dialysis'",
+        answer: "Diálisis",
+        explanation: "Dialysis = Diálisis — a treatment that replaces kidney function by filtering waste from the blood.",
+      },
+      {
+        prompt: "What is 'Metastasis' in Spanish?",
+        options: ["A. Tumor", "B. Metástasis", "C. Carcinoma", "D. Displasia"],
+        answer: "B",
+        explanation: "Metastasis = Metástasis — the spread of cancer from the primary site to other parts of the body.",
+      },
+      {
+        prompt: "Translate: 'Informed Consent'",
+        answer: "Consentimiento Informado",
+        explanation: "Informed Consent = Consentimiento Informado — a patient's agreement to a procedure after understanding the risks.",
+      },
+    ],
+  },
 ];
