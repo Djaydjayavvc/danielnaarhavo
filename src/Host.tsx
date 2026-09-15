@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
-import { subjects } from './questions';
+import { subjects as allSubjects } from './questions';
 import { memes } from './memes';
 import { bondingQuestions } from './bonding';
 import { SummaryButton } from './SummaryButton';
+
+const subjects = allSubjects.filter((s) => !s.id.startsWith('pisco-'));
 
 // ─── RESULTATEN ─────────────────────────────────────────────────────
 

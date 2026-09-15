@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from './lib/supabase';
-import { subjects } from './questions';
+import { subjects as allSubjects } from './questions';
 import { memes } from './memes';
 import { bondingQuestions } from './bonding';
 import confetti from 'canvas-confetti';
 import { SummaryButton } from './SummaryButton';
+
+const subjects = allSubjects.filter((s) => !s.id.startsWith('pisco-'));
 
 function checkCorrect(playerAnswer: string, correctAnswer: string, isMC: boolean) {
   if (!isMC) return false;
